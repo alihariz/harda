@@ -6,7 +6,7 @@ Flask-JWT-Extended==4.6.0
 Flask-CORS==4.0.1
 
 # Database
-psycopg2-binary==2.9.9
+psycopg2-binary
 SQLAlchemy==2.0.36
 
 # Auth & Security
@@ -14,7 +14,7 @@ bcrypt==4.2.0
 python-dotenv==1.0.1
 
 # Image Processing & EXIF
-Pillow==10.4.0
+Pillow>=11.0.0
 opencv-python-headless==4.10.0.84
 
 # ML / YOLO (install separately — large dependency)
