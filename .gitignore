@@ -1,0 +1,60 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environment
+backend/venv/
+backend/.venv/
+venv/
+.venv/
+
+# Environment variables
+.env
+*.local
+
+# Flask / SQLAlchemy
+instance/
+*.db
+*.sqlite3
+
+# Uploads (uploaded images should not be committed)
+backend/uploads/
+
+# Flask-Migrate (keep migrations folder but not compiled cache)
+backend/migrations/__pycache__/
+
+# ML weights (large binary files)
+ml/weights/*.pt
+ml/weights/*.pth
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Node (frontend)
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
+# Android (mobile)
+mobile/.gradle/
+mobile/build/
+mobile/local.properties
+mobile/*.apk
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
