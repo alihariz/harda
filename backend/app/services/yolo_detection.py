@@ -1,5 +1,34 @@
 from flask import current_app
 
+# Map raw model class names → HARDA canonical hazard_types.
+# Covers labels from common pothole/road-damage datasets.
+_CLASS_MAP = {
+    # pothole models — some datasets store the single class as "0" or "1"
+    "pothole": "pothole",
+    "pot hole": "pothole",
+    "potholes": "pothole",
+    "0": "pothole",   # peterhdd/pothole-detection-yolov8 uses numeric label
+    "1": "pothole",
+    # crack / surface damage
+    "crack": "uneven_surface",
+    "alligator crack": "uneven_surface",
+    "longitudinal crack": "uneven_surface",
+    "transverse crack": "uneven_surface",
+    "road damage": "uneven_surface",
+    "uneven": "uneven_surface",
+    "bump": "uneven_surface",
+    # lane marking
+    "lane marking": "faded_lane_marking",
+    "faded lane": "faded_lane_marking",
+    "lane": "faded_lane_marking",
+}
+
+
+def _map_class(raw_label: str) -> str:
+    """Normalise a raw model class name to a HARDA hazard type.
+    Falls back to 'uneven_surface' for unknown classes."""
+    return _CLASS_MAP.get(raw_label.lower().strip(), "uneven_surface")
+
 
 class YOLODetectionService:
     """YOLO inference via Ultralytics YOLOv8. UC001/UC002.
@@ -11,8 +40,18 @@ class YOLODetectionService:
     def _get_model(cls):
         if cls._model is None:
             try:
+                import os
                 from ultralytics import YOLO
                 model_path = current_app.config.get("YOLO_MODEL_PATH", "ml/weights/yolov8n.pt")
+                # Relative paths in .env are relative to the project root (harda/).
+                # __file__ is at backend/app/services/yolo_detection.py — 4 levels up to reach harda/.
+                if not os.path.isabs(model_path):
+                    project_root = os.path.dirname(
+                        os.path.dirname(
+                            os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                        )
+                    )
+                    model_path = os.path.join(project_root, model_path)
                 cls._model = YOLO(model_path)
             except ImportError:
                 raise RuntimeError("ultralytics is not installed. Run: pip install ultralytics")
@@ -23,9 +62,11 @@ class YOLODetectionService:
         """Analyse an in-memory file object."""
         import tempfile, os
         suffix = ".jpg"
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            image_file.save(tmp.name)
-            tmp_path = tmp.name
+        # Close the handle before writing on Windows — open handle blocks the write otherwise.
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+        tmp_path = tmp.name
+        tmp.close()
+        image_file.save(tmp_path)
         try:
             return cls.analyse_path(tmp_path)
         finally:
@@ -47,7 +88,8 @@ class YOLODetectionService:
                     label = result.names[cls_id]
                     bbox = box.xyxy[0].tolist()
                     detections.append({
-                        "hazard_type": label,
+                        "hazard_type": _map_class(label),
+                        "raw_label": label,
                         "confidence": round(conf, 4),
                         "bounding_box": bbox,
                     })

@@ -3,7 +3,7 @@ from flask import jsonify
 
 def success(data=None, message="OK", status_code=200):
     """Standard success response. All API responses follow this shape."""
-    return jsonify({"success": True, "data": data or {}, "message": message, "errors": []}), status_code
+    return jsonify({"success": True, "data": data if data is not None else {}, "message": message, "errors": []}), status_code
 
 
 def error(message="An error occurred", errors=None, status_code=400):

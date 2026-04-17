@@ -29,7 +29,11 @@ class ImageProcessingService:
         file_name = f"{report_id}_{timestamp}.{ext}"
         file_path = os.path.join(sub_dir, file_name)
 
+        file.stream.seek(0)
         img = Image.open(file.stream)
+        # JPEG cannot encode RGBA or palette mode — convert to RGB first
+        if img.mode in ("RGBA", "P", "LA"):
+            img = img.convert("RGB")
         # Resize to YOLO-friendly size while preserving aspect ratio
         img.thumbnail((1280, 1280))
         img.save(file_path, optimize=True)

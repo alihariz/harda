@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from app import db
 from app.models.hazard_report import HazardReport
@@ -18,65 +19,93 @@ class HazardReportingService:
             return None, "Image file is required"
 
         image_file = request.files["image"]
+        if not image_file.filename:
+            return None, "No file selected"
+        if not ImageProcessingService.allowed_file(image_file.filename):
+            return None, "Invalid file type. Allowed: jpg, jpeg, png"
+
         form = request.form
 
-        # UC002 – Extract GPS from EXIF; fall back to submitted lat/lng
-        lat = form.get("latitude")
-        lng = form.get("longitude")
+        # UC002 – Extract GPS from EXIF; fall back to form-submitted lat/lng
+        lat = lng = None
         exif_result = ImageProcessingService.extract_exif_gps(image_file)
         if exif_result:
-            lat, lng = exif_result
+            lat, lng = exif_result  # already floats
+        else:
+            raw_lat = form.get("latitude")
+            raw_lng = form.get("longitude")
+            try:
+                if raw_lat is not None and raw_lng is not None:
+                    lat = float(raw_lat)
+                    lng = float(raw_lng)
+            except (TypeError, ValueError):
+                return None, "latitude and longitude must be valid numbers"
 
-        if not lat or not lng:
+        if lat is None or lng is None:
             return None, "Location data is required (GPS EXIF or lat/lng fields)"
 
-        # Persist location
-        location = Location(
-            latitude=lat,
-            longitude=lng,
-            address_name=form.get("address_name"),
-            state=form.get("state"),
-            postal_code=form.get("postal_code"),
-            accuracy=form.get("accuracy"),
-        )
-        db.session.add(location)
-        db.session.flush()
+        # JWT identity is stored as a string; FK column expects int or None
+        uid = int(user_id) if user_id is not None else None
 
-        # Resolve 'submitted' status
-        status = HazardStatus.query.filter_by(status_name="submitted").first()
+        try:
+            # Persist location
+            location = Location(
+                latitude=lat,
+                longitude=lng,
+                address_name=form.get("address_name"),
+                state=form.get("state"),
+                postal_code=form.get("postal_code"),
+                country=form.get("country", "Malaysia"),
+                accuracy=float(form.get("accuracy")) if form.get("accuracy") else None,
+            )
+            db.session.add(location)
+            db.session.flush()  # assigns location_id
 
-        report = HazardReport(
-            user_id=user_id,
-            location_id=location.location_id,
-            status_id=status.status_id if status else 1,
-            title=form.get("title", "Untitled Hazard Report"),
-            description=form.get("description"),
-            is_public=True,
-        )
-        db.session.add(report)
-        db.session.flush()
+            # Resolve 'submitted' status
+            status = HazardStatus.query.filter_by(status_name="submitted").first()
 
-        # Save image to disk
-        saved_path, file_name = ImageProcessingService.save_image(image_file, report.report_id)
-        image_record = HazardImage(
-            report_id=report.report_id,
-            file_path=saved_path,
-            file_name=file_name,
-            mime_type=image_file.mimetype,
-            is_primary=True,
-        )
-        db.session.add(image_record)
+            report = HazardReport(
+                user_id=uid,
+                location_id=location.location_id,
+                status_id=status.status_id if status else 1,
+                title=form.get("title", "Untitled Hazard Report"),
+                description=form.get("description"),
+                is_public=True,
+            )
+            db.session.add(report)
+            db.session.flush()  # assigns report_id
 
-        # Run YOLO detection
-        detection, _ = YOLODetectionService.analyse_path(saved_path)
-        if detection and not detection.get("low_confidence"):
-            from app.models.hazard_type import HazardType
-            hazard_type = HazardType.query.filter_by(type_name=detection["hazard_type"]).first()
-            report.hazard_type_id = hazard_type.hazard_type_id if hazard_type else None
-            report.severity_score = detection.get("severity_score")
+            # Save image to disk (stream is seeked to 0 inside save_image)
+            saved_path, file_name = ImageProcessingService.save_image(image_file, report.report_id)
+            file_size = os.path.getsize(saved_path)
 
-        db.session.commit()
-        return {**report.to_dict(), "detection": detection}, None
+            image_record = HazardImage(
+                report_id=report.report_id,
+                file_path=saved_path,
+                file_name=file_name,
+                file_size=file_size,
+                mime_type=image_file.mimetype or "image/jpeg",
+                upload_date=datetime.utcnow(),
+                is_primary=True,
+            )
+            db.session.add(image_record)
+
+            # Run YOLO detection against the saved file
+            detection, _ = YOLODetectionService.analyse_path(saved_path)
+            if detection and not detection.get("low_confidence"):
+                from app.models.hazard_type import HazardType
+                hazard_type = HazardType.query.filter_by(
+                    type_name=detection["hazard_type"]
+                ).first()
+                report.hazard_type_id = hazard_type.hazard_type_id if hazard_type else None
+                report.severity_score = detection.get("severity_score")
+
+            db.session.commit()
+            return {**report.to_dict(), "detection": detection}, None
+
+        except Exception as exc:
+            db.session.rollback()
+            return None, f"Failed to submit report: {str(exc)}"
 
     @staticmethod
     def list_reports(filters, admin_view=False):
@@ -154,7 +183,7 @@ class HazardReportingService:
             return None, "Report not found"
         verified = HazardStatus.query.filter_by(status_name="verified").first()
         report.status_id = verified.status_id if verified else report.status_id
-        report.admin_id = admin_id
+        report.admin_id = int(admin_id) if admin_id is not None else None
         report.validation_date = datetime.utcnow()
         if data.get("hazard_type_id"):
             report.hazard_type_id = data["hazard_type_id"]
@@ -185,7 +214,7 @@ class HazardReportingService:
             report = db.session.get(HazardReport, rid)
             if report:
                 report.status_id = status.status_id
-                report.admin_id = admin_id
+                report.admin_id = int(admin_id) if admin_id is not None else None
                 updated += 1
         db.session.commit()
         return {"updated": updated}, None
