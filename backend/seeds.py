@@ -19,6 +19,7 @@ def seed():
     from app.models.admin import Admin
     from app.models.hazard_type import HazardType
     from app.models.hazard_status import HazardStatus
+    from app.models.team import Team
 
     app = create_app(os.getenv("FLASK_ENV", "development"))
 
@@ -115,6 +116,89 @@ def seed():
                 print(f"  [+] HazardStatus created: {hs['status_name']}")
             else:
                 print(f"  [=] HazardStatus already exists: {hs['status_name']}")
+
+        # Flush so newly-inserted admin gets an ID before we wire teams to it.
+        db.session.flush()
+
+        # ── 5. Teams (Progress 2 — Sufie's field-crew workflow) ──────────────
+        admin_row = Admin.query.filter_by(email=admin_data["email"]).first()
+        lead_admin_id = admin_row.admin_id if admin_row else None
+        teams_data = [
+            {
+                "team_name": "KL Maintenance Crew",
+                "region": "Kuala Lumpur",
+                "description": "Field crew responsible for hazards in KL city limits.",
+            },
+            {
+                "team_name": "Johor South Crew",
+                "region": "Johor",
+                "description": "Field crew covering Johor Bahru and southern districts.",
+            },
+            {
+                "team_name": "Penang Island Crew",
+                "region": "Pulau Pinang",
+                "description": "Field crew covering Pulau Pinang and Seberang Perai.",
+            },
+        ]
+        for t in teams_data:
+            if not Team.query.filter_by(team_name=t["team_name"]).first():
+                db.session.add(
+                    Team(
+                        team_name=t["team_name"],
+                        region=t["region"],
+                        description=t["description"],
+                        lead_admin_id=lead_admin_id,
+                        created_date=datetime.utcnow(),
+                        is_active=True,
+                    )
+                )
+                print(f"  [+] Team created: {t['team_name']}")
+            else:
+                print(f"  [=] Team already exists: {t['team_name']}")
+        db.session.flush()
+
+        # ── 6. Sample crew users (one per team) ──────────────────────────────
+        kl_team = Team.query.filter_by(team_name="KL Maintenance Crew").first()
+        johor_team = Team.query.filter_by(team_name="Johor South Crew").first()
+        crew_users = [
+            {
+                "username": "crew_kl",
+                "email": "crew_kl@harda.my",
+                "password": "Crew123!",
+                "first_name": "Aiman",
+                "last_name": "Razak",
+                "role": "crew",
+                "team_id": kl_team.team_id if kl_team else None,
+            },
+            {
+                "username": "crew_johor",
+                "email": "crew_johor@harda.my",
+                "password": "Crew123!",
+                "first_name": "Nurul",
+                "last_name": "Hafiz",
+                "role": "crew",
+                "team_id": johor_team.team_id if johor_team else None,
+            },
+        ]
+        for cu in crew_users:
+            if not User.query.filter_by(email=cu["email"]).first():
+                pw_hash = bcrypt.hashpw(cu["password"].encode(), bcrypt.gensalt()).decode()
+                db.session.add(
+                    User(
+                        username=cu["username"],
+                        email=cu["email"],
+                        password_hash=pw_hash,
+                        first_name=cu["first_name"],
+                        last_name=cu["last_name"],
+                        role=cu["role"],
+                        team_id=cu["team_id"],
+                        created_date=datetime.utcnow(),
+                        is_active=True,
+                    )
+                )
+                print(f"  [+] Crew user created: {cu['email']} (team_id={cu['team_id']})")
+            else:
+                print(f"  [=] Crew user already exists: {cu['email']}")
 
         db.session.commit()
         print("\nSeeding complete.")

@@ -15,6 +15,20 @@ def admin_required(fn):
     return wrapper
 
 
+def crew_required(fn):
+    """Decorator that restricts a route to field-crew JWT tokens.
+    Progress 2: crew members upload after-photos and view their team's
+    assignment inbox."""
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        verify_jwt_in_request()
+        claims = get_jwt()
+        if claims.get("role") != "crew":
+            return error("Field-crew access required", status_code=403)
+        return fn(*args, **kwargs)
+    return wrapper
+
+
 def jwt_optional_or_guest(fn):
     """Allows both authenticated users and guests (no token required).
     Use on endpoints like POST /reports where guest submissions are valid. UC001."""

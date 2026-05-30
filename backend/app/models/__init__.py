@@ -6,6 +6,7 @@ from app.models.hazard_status import HazardStatus
 from app.models.hazard_report import HazardReport
 from app.models.hazard_image import HazardImage
 from app.models.system_report import SystemReport
+from app.models.team import Team
 
 __all__ = [
     "User",
@@ -16,4 +17,5 @@ __all__ = [
     "HazardReport",
     "HazardImage",
     "SystemReport",
+    "Team",
 ]

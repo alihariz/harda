@@ -30,12 +30,13 @@ export default function Navbar() {
           {/* Desktop links */}
           <div className="hidden md:flex items-center gap-6">
             <NavLink to="/" end className={linkClass}>Map</NavLink>
-            <NavLink to="/submit" className={linkClass}>Submit Report</NavLink>
-            {user && <NavLink to="/reports" className={linkClass}>My Reports</NavLink>}
+            {!isAdmin && <NavLink to="/submit" className={linkClass}>Submit Report</NavLink>}
+            {!isAdmin && user && <NavLink to="/reports" className={linkClass}>My Reports</NavLink>}
             {isAdmin && (
               <>
                 <NavLink to="/admin" end className={linkClass}>Dashboard</NavLink>
                 <NavLink to="/admin/reports" className={linkClass}>Report Queue</NavLink>
+                <NavLink to="/admin/archive" className={linkClass}>Archive</NavLink>
               </>
             )}
           </div>
@@ -81,12 +82,13 @@ export default function Navbar() {
       {menuOpen && (
         <div className="md:hidden bg-gray-800 border-t border-gray-700 px-4 py-3 flex flex-col gap-3">
           <NavLink to="/" end className={linkClass} onClick={() => setMenuOpen(false)}>Map</NavLink>
-          <NavLink to="/submit" className={linkClass} onClick={() => setMenuOpen(false)}>Submit Report</NavLink>
-          {user && <NavLink to="/reports" className={linkClass} onClick={() => setMenuOpen(false)}>My Reports</NavLink>}
+          {!isAdmin && <NavLink to="/submit" className={linkClass} onClick={() => setMenuOpen(false)}>Submit Report</NavLink>}
+          {!isAdmin && user && <NavLink to="/reports" className={linkClass} onClick={() => setMenuOpen(false)}>My Reports</NavLink>}
           {isAdmin && (
             <>
               <NavLink to="/admin" end className={linkClass} onClick={() => setMenuOpen(false)}>Dashboard</NavLink>
               <NavLink to="/admin/reports" className={linkClass} onClick={() => setMenuOpen(false)}>Report Queue</NavLink>
+              <NavLink to="/admin/archive" className={linkClass} onClick={() => setMenuOpen(false)}>Archive</NavLink>
             </>
           )}
           <hr className="border-gray-700" />

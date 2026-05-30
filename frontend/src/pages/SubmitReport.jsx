@@ -130,7 +130,7 @@ export default function SubmitReport() {
           </p>
           {detection && !detection.low_confidence ? (
             <div className="mt-3 bg-white border border-green-200 rounded-lg px-4 py-3 text-left inline-block w-full max-w-xs mx-auto">
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">YOLO Detection Result</p>
+              <p className="text-xs text-gray-500 mb-1">AI detected</p>
               <p className="text-gray-800 font-semibold capitalize">{hazardTypeName.replace(/_/g, ' ')}</p>
               <div className="flex items-center gap-2 mt-1.5">
                 <div className="flex-1 bg-gray-200 rounded-full h-1.5">
@@ -148,7 +148,7 @@ export default function SubmitReport() {
           ) : (
             <p className="text-green-600 text-sm mt-2">
               {detection?.low_confidence
-                ? 'Detection confidence below threshold — admin will review manually.'
+                ? 'AI detection was uncertain — an admin will classify this manually.'
                 : 'No hazard auto-detected — report flagged for manual review.'}
             </p>
           )}

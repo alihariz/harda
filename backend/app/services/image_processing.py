@@ -13,9 +13,11 @@ class ImageProcessingService:
         return "." in filename and filename.rsplit(".", 1)[1].lower() in allowed
 
     @staticmethod
-    def save_image(file, report_id):
-        """Save uploaded image using path convention: uploads/{year}/{month}/{report_id}_{timestamp}.jpg
-        UC001 – F1 requirement."""
+    def save_image(file, report_id, suffix=None):
+        """Save uploaded image using path convention:
+            uploads/{year}/{month}/{report_id}_{timestamp}[_{suffix}].{ext}
+        UC001 – F1 requirement. `suffix` lets Progress 2 distinguish 'after' photos
+        on disk for easy human inspection (e.g. '..._after.jpg')."""
         now = datetime.utcnow()
         sub_dir = os.path.join(
             current_app.config["UPLOAD_FOLDER"],
@@ -26,7 +28,10 @@ class ImageProcessingService:
 
         ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else "jpg"
         timestamp = int(now.timestamp())
-        file_name = f"{report_id}_{timestamp}.{ext}"
+        stem = f"{report_id}_{timestamp}"
+        if suffix:
+            stem = f"{stem}_{suffix}"
+        file_name = f"{stem}.{ext}"
         file_path = os.path.join(sub_dir, file_name)
 
         file.stream.seek(0)

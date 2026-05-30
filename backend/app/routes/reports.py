@@ -1,7 +1,7 @@
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.utils.responses import success, error
-from app.utils.auth import jwt_optional_or_guest, admin_required
+from app.utils.auth import jwt_optional_or_guest, admin_required, crew_required
 from app.services.hazard_reporting import HazardReportingService
 
 reports_bp = Blueprint("reports", __name__)
@@ -93,3 +93,20 @@ def delete_report(report_id):
     if err:
         return error(err, status_code=404)
     return success(message="Report deleted")
+
+
+@reports_bp.route("/<int:report_id>/after-photo", methods=["POST"])
+@crew_required
+def upload_after_photo(report_id):
+    """Progress 2 — Field crew uploads a post-resolution 'after' photo.
+    Transitions report to 'resolved'. Sufie's stakeholder feature."""
+    if "image" not in request.files:
+        return error("Image file is required")
+    image_file = request.files["image"]
+    user_id = get_jwt_identity()
+    result, err = HazardReportingService.upload_after_photo(
+        report_id=report_id, user_id=user_id, image_file=image_file
+    )
+    if err:
+        return error(err, status_code=400)
+    return success(result, "After-photo uploaded; report marked resolved")

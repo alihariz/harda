@@ -15,8 +15,14 @@ class Admin(db.Model):
     last_login = db.Column(db.DateTime)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
 
-    reports_validated = db.relationship("HazardReport", back_populates="admin", lazy="dynamic")
+    reports_validated = db.relationship(
+        "HazardReport",
+        back_populates="admin",
+        lazy="dynamic",
+        foreign_keys="HazardReport.admin_id",
+    )
     system_reports = db.relationship("SystemReport", back_populates="generated_by_admin", lazy="dynamic")
+    led_teams = db.relationship("Team", back_populates="lead_admin", lazy="dynamic")
 
     def to_dict(self):
         return {

@@ -1,4 +1,5 @@
-from flask import Flask
+import os
+from flask import Flask, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
@@ -28,6 +29,7 @@ def create_app(config_name="development"):
     from app.routes.locations import locations_bp
     from app.routes.users import users_bp
     from app.routes.admin import admin_bp
+    from app.routes.crew import crew_bp
 
     prefix = "/api/v1"
     app.register_blueprint(auth_bp, url_prefix=f"{prefix}/auth")
@@ -36,6 +38,14 @@ def create_app(config_name="development"):
     app.register_blueprint(locations_bp, url_prefix=f"{prefix}/locations")
     app.register_blueprint(users_bp, url_prefix=f"{prefix}/users")
     app.register_blueprint(admin_bp, url_prefix=f"{prefix}/admin")
+    app.register_blueprint(crew_bp, url_prefix=f"{prefix}/crew")
+
+    # Serve uploaded hazard images at /uploads/<path>
+    upload_root = os.path.abspath(app.config.get("UPLOAD_FOLDER", "uploads"))
+
+    @app.route("/uploads/<path:filename>")
+    def serve_upload(filename):
+        return send_from_directory(upload_root, filename)
 
     # Import models so Flask-Migrate can detect them
     from app import models  # noqa: F401

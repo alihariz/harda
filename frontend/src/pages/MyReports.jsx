@@ -94,7 +94,14 @@ export default function MyReports() {
                   <span className="font-mono text-xs text-gray-400 shrink-0">#{r.report_id}</span>
                   <p className="font-semibold text-gray-800 truncate">{r.title ?? 'Untitled Report'}</p>
                 </div>
-                <StatusBadge statusName={statusName} />
+                <div className="flex items-center gap-2 flex-wrap justify-end">
+                  {r.detection_low_confidence && statusName === 'submitted' && (
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 whitespace-nowrap">
+                      ⚠ Awaiting manual review
+                    </span>
+                  )}
+                  <StatusBadge statusName={statusName} />
+                </div>
               </div>
 
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">

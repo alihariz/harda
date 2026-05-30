@@ -18,13 +18,18 @@ def register():
 
 @auth_bp.route("/login", methods=["POST"])
 def login():
-    """User login → returns JWT."""
+    """User login → returns JWT. Token claims include `role` (user/crew) and
+    `team_id` (for crew) so the mobile app can route to user vs crew tabs
+    without an extra round-trip."""
     data = request.get_json()
     user, err = UserManagementService.authenticate_user(data.get("email"), data.get("password"))
     if err:
         return error(err, status_code=401)
-    access_token = create_access_token(identity=str(user.user_id), additional_claims={"role": "user"})
-    refresh_token = create_refresh_token(identity=str(user.user_id))
+    claims = {"role": user.role or "user"}
+    if user.team_id is not None:
+        claims["team_id"] = user.team_id
+    access_token = create_access_token(identity=str(user.user_id), additional_claims=claims)
+    refresh_token = create_refresh_token(identity=str(user.user_id), additional_claims=claims)
     return success({"access_token": access_token, "refresh_token": refresh_token, "user": user.to_dict()})
 
 

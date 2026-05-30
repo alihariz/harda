@@ -1,0 +1,322 @@
+// UC012 — Explicitly archived hazard reports (resolved + rejected)
+// Audit-ready view with before+after photos. Archive is an explicit admin
+// action — resolved/rejected reports don't appear here until archived.
+// Backend: GET /admin/archive?state=&team_id=&status=   (admin_required)
+//          GET /admin/archive/export.csv                 (admin_required, same filters)
+//          POST /admin/reports/:id/unarchive             (admin_required)
+import { useEffect, useState, useCallback } from 'react'
+import api from '../api/axios'
+import ReportDetailModal from './ReportDetailModal'
+
+const MY_STATES = [
+  'Johor', 'Kedah', 'Kelantan', 'Kuala Lumpur', 'Labuan', 'Melaka',
+  'Negeri Sembilan', 'Pahang', 'Penang', 'Perak', 'Perlis', 'Putrajaya',
+  'Sabah', 'Sarawak', 'Selangor', 'Terengganu',
+]
+
+const SEVERITY_LABELS = ['', 'Very Low', 'Low', 'Medium', 'High', 'Critical']
+
+const STATUS_BADGE = {
+  resolved: 'bg-blue-100 text-blue-700',
+  rejected: 'bg-red-100 text-red-700',
+}
+
+const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:5000/api/v1').replace('/api/v1', '')
+
+function imgUrl(filePath) {
+  if (!filePath) return null
+  return `${API_ORIGIN}/${filePath}`
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString('en-MY', {
+    day: 'numeric', month: 'short', year: 'numeric',
+  })
+}
+
+function SeverityPips({ score }) {
+  if (!score) return <span className="text-gray-400 text-xs">—</span>
+  const colour = score >= 4 ? 'bg-red-500' : score >= 3 ? 'bg-yellow-400' : 'bg-green-400'
+  return (
+    <span className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <span key={i} className={`inline-block w-2 h-2 rounded-full ${i <= score ? colour : 'bg-gray-200'}`} />
+      ))}
+      <span className="text-xs text-gray-500 ml-1">{SEVERITY_LABELS[score]}</span>
+    </span>
+  )
+}
+
+function ArchiveCard({ report, onClick, onUnarchive, unarchiving }) {
+  const before = report.before_image
+  const after = report.after_image
+  const loc = report.location
+  const hazardName = report.hazard_type?.type_name?.replace(/_/g, ' ') ?? '—'
+  const teamName = report.assigned_team?.team_name ?? null
+  const statusName = report.status?.status_name ?? 'resolved'
+  const badgeCls = STATUS_BADGE[statusName] ?? STATUS_BADGE.resolved
+  const statusLabel = statusName === 'rejected' ? 'Rejected' : 'Resolved'
+
+  return (
+    <div className="w-full text-left bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:border-orange-300 transition-all group">
+      {/* Photos — side by side, clicking opens detail */}
+      <button className="w-full" onClick={onClick}>
+        <div className="grid grid-cols-2 divide-x divide-gray-100 bg-gray-50">
+          <div className="relative">
+            <span className="absolute top-2 left-2 z-10 text-xs font-medium bg-black/50 text-white px-2 py-0.5 rounded-full">
+              Before
+            </span>
+            {before ? (
+              <img
+                src={imgUrl(before.file_path)}
+                alt="Before"
+                className="w-full aspect-video object-cover"
+                onError={(e) => { e.currentTarget.style.display = 'none' }}
+              />
+            ) : (
+              <div className="w-full aspect-video flex items-center justify-center text-gray-300 text-xs">No photo</div>
+            )}
+          </div>
+          <div className="relative">
+            <span className="absolute top-2 left-2 z-10 text-xs font-medium bg-emerald-600/80 text-white px-2 py-0.5 rounded-full">
+              After ✓
+            </span>
+            {after ? (
+              <img
+                src={imgUrl(after.file_path)}
+                alt="After"
+                className="w-full aspect-video object-cover"
+                onError={(e) => { e.currentTarget.style.display = 'none' }}
+              />
+            ) : (
+              <div className="w-full aspect-video flex items-center justify-center text-gray-300 text-xs">No photo</div>
+            )}
+          </div>
+        </div>
+      </button>
+
+      {/* Details */}
+      <div className="px-4 py-3">
+        <button className="w-full text-left" onClick={onClick}>
+          <div className="flex items-start justify-between gap-2">
+            <p className="font-semibold text-gray-800 text-sm truncate group-hover:text-orange-600 transition-colors">
+              {report.title ?? 'Untitled'}
+            </p>
+            <span className="shrink-0 text-xs font-mono text-gray-400">#{report.report_id}</span>
+          </div>
+
+          <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-gray-600">
+            <span className="capitalize">{hazardName}</span>
+            <SeverityPips score={report.severity_score} />
+
+            {loc?.state && <span className="text-gray-400">{loc.state}</span>}
+            {loc?.address_name && (
+              <span className="text-gray-400 truncate col-span-2 -mt-1">{loc.address_name}</span>
+            )}
+
+            {teamName && (
+              <span className="col-span-2 mt-0.5 text-orange-600 font-medium">{teamName}</span>
+            )}
+          </div>
+        </button>
+
+        <div className="mt-2.5 pt-2.5 border-t border-gray-100 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2">
+            <span className={`font-medium px-2 py-0.5 rounded-full ${badgeCls}`}>{statusLabel}</span>
+            <span className="text-gray-400">Archived {fmtDate(report.archived_at)}</span>
+          </div>
+          <button
+            onClick={(e) => { e.stopPropagation(); onUnarchive(report.report_id) }}
+            disabled={unarchiving === report.report_id}
+            className="text-gray-400 hover:text-orange-600 transition-colors font-medium disabled:opacity-50"
+          >
+            {unarchiving === report.report_id ? 'Restoring…' : 'Unarchive'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function AdminArchive() {
+  const [reports, setReports] = useState([])
+  const [total, setTotal] = useState(0)
+  const [teams, setTeams] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
+  const [unarchiving, setUnarchiving] = useState(null)
+  const [error, setError] = useState(null)
+  const [filters, setFilters] = useState({ state: '', team_id: '', status: '' })
+  const [detailId, setDetailId] = useState(null)
+
+  const fetchArchive = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    const params = {}
+    if (filters.state) params.state = filters.state
+    if (filters.team_id) params.team_id = filters.team_id
+    if (filters.status) params.status = filters.status
+    try {
+      const { data } = await api.get('/admin/archive', { params })
+      setReports(data.data?.reports ?? [])
+      setTotal(data.data?.total ?? 0)
+    } catch {
+      setError('Failed to load archive. Check that the backend is running.')
+    } finally {
+      setLoading(false)
+    }
+  }, [filters])
+
+  useEffect(() => { fetchArchive() }, [fetchArchive])
+
+  useEffect(() => {
+    api.get('/admin/teams')
+      .then(({ data }) => setTeams(data.data ?? []))
+      .catch(() => {})
+  }, [])
+
+  async function handleUnarchive(reportId) {
+    setUnarchiving(reportId)
+    try {
+      await api.post(`/admin/reports/${reportId}/unarchive`)
+      fetchArchive()
+    } catch {
+      setError(`Failed to unarchive report #${reportId}.`)
+    } finally {
+      setUnarchiving(null)
+    }
+  }
+
+  async function handleExportCsv() {
+    setExporting(true)
+    try {
+      const params = {}
+      if (filters.state) params.state = filters.state
+      if (filters.team_id) params.team_id = filters.team_id
+      if (filters.status) params.status = filters.status
+      const res = await api.get('/admin/archive/export.csv', {
+        params,
+        responseType: 'blob',
+      })
+      const url = URL.createObjectURL(res.data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `harda_archive_${new Date().toISOString().slice(0, 10)}.csv`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch {
+      setError('CSV export failed.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-10">
+
+      {/* Header */}
+      <div className="flex items-start justify-between flex-wrap gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Hazard Archive</h1>
+          <p className="text-gray-500 text-sm mt-0.5">
+            {loading ? 'Loading…' : `${total} archived report${total !== 1 ? 's' : ''} — resolved and rejected`}
+          </p>
+        </div>
+        <button
+          onClick={handleExportCsv}
+          disabled={exporting || total === 0}
+          className="flex items-center gap-2 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          {exporting ? 'Exporting…' : 'Export CSV'}
+        </button>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 mb-6">
+        <select
+          value={filters.status}
+          onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
+          className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 text-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+        >
+          <option value="">All Statuses</option>
+          <option value="resolved">Resolved only</option>
+          <option value="rejected">Rejected only</option>
+        </select>
+
+        <select
+          value={filters.state}
+          onChange={(e) => setFilters((f) => ({ ...f, state: e.target.value }))}
+          className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 text-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+        >
+          <option value="">All States</option>
+          {MY_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+
+        <select
+          value={filters.team_id}
+          onChange={(e) => setFilters((f) => ({ ...f, team_id: e.target.value }))}
+          className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 text-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+        >
+          <option value="">All Teams</option>
+          {teams.map((t) => (
+            <option key={t.team_id} value={t.team_id}>{t.team_name}</option>
+          ))}
+        </select>
+
+        <button
+          onClick={fetchArchive}
+          className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 text-gray-600 hover:bg-gray-50 transition-colors"
+          title="Refresh"
+        >
+          ↺
+        </button>
+      </div>
+
+      {/* Error */}
+      {error && (
+        <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-6">{error}</p>
+      )}
+
+      {/* Content */}
+      {loading ? (
+        <div className="flex justify-center py-24">
+          <div className="w-10 h-10 border-4 border-orange-400 border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : total === 0 ? (
+        <div className="text-center py-24">
+          <p className="text-gray-400 text-lg">No archived reports yet.</p>
+          <p className="text-gray-300 text-sm mt-1">
+            Resolved or rejected reports will appear here once an admin archives them.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {reports.map((r) => (
+            <ArchiveCard
+              key={r.report_id}
+              report={r}
+              onClick={() => setDetailId(r.report_id)}
+              onUnarchive={handleUnarchive}
+              unarchiving={unarchiving}
+            />
+          ))}
+        </div>
+      )}
+
+      {detailId && (
+        <ReportDetailModal
+          reportId={detailId}
+          onClose={() => setDetailId(null)}
+          onUpdated={fetchArchive}
+        />
+      )}
+    </div>
+  )
+}

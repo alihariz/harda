@@ -9,6 +9,7 @@ import MyReports from './pages/MyReports'
 import Login from './pages/Login'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminReports from './pages/AdminReports'
+import AdminArchive from './pages/AdminArchive'
 
 export default function App() {
   return (
@@ -34,6 +35,9 @@ export default function App() {
               } />
               <Route path="/admin/reports" element={
                 <ProtectedRoute adminOnly><AdminReports /></ProtectedRoute>
+              } />
+              <Route path="/admin/archive" element={
+                <ProtectedRoute adminOnly><AdminArchive /></ProtectedRoute>
               } />
             </Routes>
           </main>

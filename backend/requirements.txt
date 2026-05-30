@@ -22,3 +22,7 @@ ultralytics>=8.3.0
 
 # Utilities
 gunicorn==23.0.0
+
+# Tests (Progress 2)
+pytest>=8.0
+PyJWT>=2.8

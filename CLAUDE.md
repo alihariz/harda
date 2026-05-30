@@ -21,7 +21,7 @@ HARDA automates road hazard detection and reporting in Malaysia. Users submit im
 harda/
 ├── backend/        # Flask REST API + PostgreSQL (primary development target)
 ├── frontend/       # React.js web app (user-facing map + admin dashboard)
-├── mobile/         # Android (Kotlin) app
+├── mobile/         # React Native + Expo (iOS + Android) — Progress 2 onwards
 ├── ml/             # YOLO inference service (Python)
 └── docs/           # Thesis PDF and supporting documents
 ```
@@ -51,13 +51,17 @@ harda/
 - **HTTP client:** Axios
 - **Two interfaces:** Public-facing (hazard map + submit report) and Admin dashboard
 
-### Mobile (Android)
-- **Language:** Kotlin
-- **IDE:** Android Studio
-- **Min SDK:** API level 26 (Android 8.0+)
-- **HTTP:** Retrofit2
-- **Maps:** Google Maps SDK for Android
-- **Camera:** CameraX API
+### Mobile (Cross-platform — Progress 2 onwards)
+- **Framework:** React Native + Expo (SDK 51+)
+- **Language:** TypeScript
+- **Routing:** `expo-router` (file-based)
+- **HTTP:** Axios (with JWT interceptor)
+- **Maps:** `react-native-maps` (Google Maps provider on both platforms)
+- **Camera:** `expo-camera`
+- **Gallery picker:** `expo-image-picker` (returns EXIF on iOS, falls back to device GPS via `expo-location`)
+- **Secure storage:** `expo-secure-store` (JWT)
+- **Two modes (role-based):** public user (UC001/UC002/UC005) and field crew (assignment inbox, after-photo upload)
+- **Platforms:** iOS 14+ (bundle id `my.edu.utm.harda`), Android 8.0+ (package `my.edu.utm.harda`)
 
 ### APIs & Services
 - **Google Maps API** — geospatial mapping, marker clustering, geocoding
@@ -65,7 +69,11 @@ harda/
 
 ---
 
-## Database Schema (8 Tables — PostgreSQL)
+## Database Schema (9 Tables — PostgreSQL)
+
+> Progress 2 added the `teams` table plus extra columns on `users`,
+> `hazard_reports`, and `hazard_images` to support Sufie Silat's stakeholder
+> requirements: admin → field-crew handoff and audit-ready after-photos.
 
 ### `users`
 | Column | Type | Notes |
@@ -80,6 +88,8 @@ harda/
 | created_date | timestamp | |
 | last_login | timestamp | |
 | is_active | boolean | default true |
+| role | varchar(20) | **Progress 2:** 'user' (default) \| 'crew' |
+| team_id | integer FK → teams | **Progress 2:** non-null for crew members |
 
 ### `admins`
 | Column | Type | Notes |
@@ -131,6 +141,8 @@ harda/
 | hazard_type_id | integer FK → hazard_types | set by YOLO detection |
 | status_id | integer FK → hazard_statuses | default 'submitted' |
 | admin_id | integer FK → admins | nullable, set on validation |
+| assigned_team_id | integer FK → teams | **Progress 2:** nullable; set on team assignment |
+| assigned_at | timestamp | **Progress 2:** when admin assigned the team |
 | title | varchar(100) | |
 | description | text | optional user description |
 | severity_score | integer | 1-5, from YOLO confidence |
@@ -150,6 +162,19 @@ harda/
 | mime_type | varchar(50) | 'image/jpeg', 'image/png' |
 | upload_date | timestamp | |
 | is_primary | boolean | |
+| is_resolution_photo | boolean | **Progress 2:** true for crew-uploaded 'after' photos |
+| uploaded_by_user_id | integer FK → users | **Progress 2:** crew member who uploaded the after-photo |
+
+### `teams` (Progress 2)
+| Column | Type | Notes |
+|---|---|---|
+| team_id | integer PK | |
+| team_name | varchar(80) | unique |
+| lead_admin_id | integer FK → admins | nullable |
+| region | varchar(80) | e.g. 'Kuala Lumpur', 'Johor', 'Pulau Pinang' |
+| description | varchar(255) | |
+| created_date | timestamp | |
+| is_active | boolean | default true |
 
 ### `system_reports`
 | Column | Type | Notes |
@@ -215,9 +240,28 @@ All endpoints prefixed with `/api/v1/`.
 | GET | `/admin/reports` | All reports with full metadata, filterable |
 | GET | `/admin/reports/pending` | Reports awaiting validation |
 | POST | `/admin/reports/bulk-action` | Bulk validate/reject/update |
-| GET | `/admin/analytics/summary` | Dashboard stats (totals, trends) |
+| GET | `/admin/analytics/summary` | Dashboard stats (totals, trends, weekly_trend, avg_resolution_days, top_states) |
 | POST | `/admin/system-reports` | Generate analytical report |
 | GET | `/admin/system-reports` | List generated reports |
+| GET | `/admin/teams` | **Progress 2:** List field-crew teams |
+| POST | `/admin/teams` | **Progress 2:** Create a team |
+| PUT | `/admin/reports/:id/assign` | **Progress 2:** Assign a team to a report (status → in_progress) |
+| GET | `/admin/archive` | **Progress 2:** Resolved-hazard archive with before+after photos |
+| GET | `/admin/archive/export.csv` | **Progress 2:** CSV export of the archive (UC012) |
+
+### Detection / Diagnostic
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/detection/model-info` | **Progress 2:** Loaded YOLO weights path + class list (live-demo transparency) |
+
+### Field Crew (Progress 2)
+Crew users log in via `/auth/login` like normal users; their JWT carries `role=crew` and `team_id`.
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/crew/assignments` | List reports assigned to the crew member's team (open by default; `?include_resolved=true`) |
+| GET | `/crew/me` | Crew profile + team identity |
+| POST | `/reports/:id/after-photo` | Crew uploads post-resolution photo; status → resolved |
 
 ---
 
@@ -351,12 +395,14 @@ Admin report queue: filterable by status/type/date, bulk action controls, detail
 2. **Follow the ERD exactly** — do not rename tables or columns without flagging it
 3. **Use the use case IDs** in comments (`# UC001`, `# UC003`) to keep traceability to the thesis
 4. **YOLO via Ultralytics only** — no custom model architecture, no training from scratch
-5. **JWT for all protected routes** — guest users can POST to `/api/v1/reports` without auth; everything else requires a valid token
+5. **JWT for all protected routes** — guest users can POST to `/api/v1/reports` without auth; everything else requires a valid token. Roles in claims: `admin`, `user`, `crew`
 6. **Confidence threshold is 0.70** — reject detections below this and return `low_confidence` flag
-7. **Image storage path convention:** `uploads/{year}/{month}/{report_id}_{timestamp}.jpg`
-8. **Status flow is one-directional:** `submitted → verified → in_progress → resolved` (or `rejected` from any state by admin)
+7. **Image storage path convention:** `uploads/{year}/{month}/{report_id}_{timestamp}.jpg` (after-photos: `..._after.jpg`)
+8. **Status flow is one-directional:** `submitted → verified → in_progress → resolved` (or `rejected` from any state by admin). Team assignment auto-moves to `in_progress`; after-photo upload auto-moves to `resolved`
 9. **Guest submissions** are allowed — `user_id` is nullable on `hazard_reports`
 10. **All API responses** follow: `{ success: bool, data: {}, message: str, errors: [] }`
+11. **Field-crew authorization (Progress 2):** crew users can only upload after-photos for reports assigned to their team — enforced in `HazardReportingService.upload_after_photo`
+12. **Mobile is React Native + Expo with TypeScript** — no Kotlin / Android Studio scaffolds. Use `npx expo install --check` to align SDK versions
 
 ---
 
@@ -386,4 +432,4 @@ MAX_CONTENT_LENGTH=10485760
 
 ---
 
-*Last updated: April 2026 — PSM II Development Phase*
+*Last updated: May 2026 — PSM II Development Phase (Progress 2)*

@@ -1,7 +1,8 @@
-// UC008 – Review Hazard Reports  UC009 – Validate  UC010 – Update Status
+// UC008 – Review Hazard Reports  UC009 – Validate  UC010 – Update Status  UC011 – Manage Hazard Data
 import { useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import api from '../api/axios'
+import ReportDetailModal from './ReportDetailModal'
 
 const STATUSES = ['submitted', 'verified', 'in_progress', 'resolved', 'rejected']
 
@@ -43,9 +44,38 @@ export default function AdminReports() {
   const [selected, setSelected] = useState(new Set())
   const [updating, setUpdating] = useState(null)
   const [toast, setToast] = useState(null) // { message, type }
+  const [detailId, setDetailId] = useState(null) // report_id currently open in modal
+  const [detailEditMode, setDetailEditMode] = useState(false)
+  const [showArchived, setShowArchived] = useState(false)
 
   function showToast(message, type = 'success') {
     setToast({ message, type })
+  }
+
+  function openModal(reportId, editMode = false) {
+    setDetailId(reportId)
+    setDetailEditMode(editMode)
+  }
+
+  async function deleteReport(reportId) {
+    if (!window.confirm(`Permanently delete Report #${reportId}? This cannot be undone.`)) return
+    try {
+      await api.delete(`/reports/${reportId}`)
+      showToast(`Report #${reportId} deleted`)
+      fetchReports()
+    } catch {
+      showToast(`Failed to delete Report #${reportId}.`, 'error')
+    }
+  }
+
+  async function archiveReport(reportId) {
+    try {
+      await api.post(`/admin/reports/${reportId}/archive`)
+      showToast(`Report #${reportId} archived`)
+      fetchReports()
+    } catch (e) {
+      showToast(e?.response?.data?.message ?? `Failed to archive Report #${reportId}.`, 'error')
+    }
   }
 
   const fetchReports = useCallback(() => {
@@ -53,6 +83,7 @@ export default function AdminReports() {
     const params = new URLSearchParams()
     if (filters.status) params.set('status', filters.status)
     if (filters.hazard_type) params.set('hazard_type', filters.hazard_type)
+    if (showArchived) params.set('include_archived', 'true')
     api.get(`/admin/reports?${params}`)
       .then(({ data }) => {
         setReports(data.data?.reports ?? [])
@@ -60,7 +91,7 @@ export default function AdminReports() {
       })
       .catch(() => showToast('Failed to load reports.', 'error'))
       .finally(() => setLoading(false))
-  }, [filters])
+  }, [filters, showArchived])
 
   useEffect(() => { fetchReports() }, [fetchReports])
 
@@ -144,6 +175,17 @@ export default function AdminReports() {
             <option value="uneven_surface">Uneven Surface</option>
           </select>
           <button
+            onClick={() => setShowArchived((v) => !v)}
+            className={`text-sm border rounded-lg px-3 py-1.5 transition-colors ${
+              showArchived
+                ? 'border-orange-400 bg-orange-50 text-orange-700 font-medium'
+                : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+            }`}
+            title={showArchived ? 'Hide archived reports' : 'Show archived reports'}
+          >
+            {showArchived ? '⊙ Archived on' : '⊙ Show archived'}
+          </button>
+          <button
             onClick={fetchReports}
             className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 text-gray-600 hover:bg-gray-50 transition-colors"
             title="Refresh"
@@ -168,6 +210,12 @@ export default function AdminReports() {
             className="text-red-600 hover:underline font-medium"
           >
             ✕ Reject all
+          </button>
+          <button
+            onClick={() => bulkAction('archive')}
+            className="text-gray-600 hover:underline font-medium"
+          >
+            ↓ Archive all
           </button>
           <button
             onClick={() => setSelected(new Set())}
@@ -201,9 +249,11 @@ export default function AdminReports() {
                 <th className="px-4 py-3 text-left text-gray-600 font-medium">Title</th>
                 <th className="px-4 py-3 text-left text-gray-600 font-medium">Type</th>
                 <th className="px-4 py-3 text-left text-gray-600 font-medium">Sev.</th>
+                <th className="px-4 py-3 text-left text-gray-600 font-medium">Conf.</th>
                 <th className="px-4 py-3 text-left text-gray-600 font-medium">Status</th>
                 <th className="px-4 py-3 text-left text-gray-600 font-medium">Date</th>
                 <th className="px-4 py-3 text-left text-gray-600 font-medium">Update Status</th>
+                <th className="px-4 py-3 w-10" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -212,12 +262,16 @@ export default function AdminReports() {
                 const hazardName = r.hazard_type?.type_name ?? null
                 const meta = STATUS_META[statusName] ?? STATUS_META.submitted
 
+                const isArchived = !!r.archived_at
+                const canArchive = !isArchived && (statusName === 'resolved' || statusName === 'rejected')
+
                 return (
                   <tr
                     key={r.report_id}
-                    className={`hover:bg-gray-50 transition-colors ${selected.has(r.report_id) ? 'bg-orange-50' : ''}`}
+                    onClick={() => openModal(r.report_id)}
+                    className={`cursor-pointer hover:bg-orange-50 transition-colors ${selected.has(r.report_id) ? 'bg-orange-50' : ''} ${isArchived ? 'opacity-60' : ''}`}
                   >
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         checked={selected.has(r.report_id)}
@@ -232,8 +286,17 @@ export default function AdminReports() {
                         <p className="text-xs text-gray-400 truncate">{r.location.state}</p>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-gray-600 capitalize whitespace-nowrap">
-                      {hazardName ? hazardName.replace(/_/g, ' ') : <span className="text-gray-300">—</span>}
+                    <td className="px-4 py-3 capitalize whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      {hazardName ? (
+                        <span className="text-gray-600">{hazardName.replace(/_/g, ' ')}</span>
+                      ) : (
+                        <button
+                          onClick={() => openModal(r.report_id, true)}
+                          className="text-xs text-amber-600 hover:text-amber-800 font-medium hover:underline"
+                        >
+                          Set type →
+                        </button>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-gray-600">
                       {r.severity_score ? (
@@ -242,17 +305,32 @@ export default function AdminReports() {
                         </span>
                       ) : <span className="text-gray-300">—</span>}
                     </td>
+                    <td className="px-4 py-3 text-xs whitespace-nowrap">
+                      {r.detection_confidence != null ? (
+                        <span className={r.detection_low_confidence ? 'text-amber-600 font-semibold' : 'text-gray-600'}>
+                          {r.detection_low_confidence && <span title="Below 70% threshold">⚠ </span>}
+                          {(r.detection_confidence * 100).toFixed(0)}%
+                        </span>
+                      ) : <span className="text-gray-300">—</span>}
+                    </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${meta.colour}`}>
-                        {meta.label}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${meta.colour}`}>
+                          {meta.label}
+                        </span>
+                        {isArchived && (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
+                            Archived
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs">
                       {r.report_date
                         ? new Date(r.report_date).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })
                         : '—'}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <select
                         value={statusName}
                         disabled={updating === r.report_id}
@@ -267,12 +345,47 @@ export default function AdminReports() {
                         <span className="ml-2 inline-block w-3 h-3 border-2 border-orange-400 border-t-transparent rounded-full animate-spin align-middle" />
                       )}
                     </td>
+                    <td className="px-2 py-3" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-0.5">
+                        {canArchive && (
+                          <button
+                            onClick={() => archiveReport(r.report_id)}
+                            title="Archive report"
+                            className="text-gray-300 hover:text-gray-600 transition-colors p-1 rounded"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                            </svg>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => deleteReport(r.report_id)}
+                          title="Delete report"
+                          className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-7 0a1 1 0 011-1h4a1 1 0 011 1M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 )
               })}
             </tbody>
           </table>
         </div>
+      )}
+
+      {detailId && (
+        <ReportDetailModal
+          reportId={detailId}
+          onClose={() => { setDetailId(null); setDetailEditMode(false) }}
+          onUpdated={fetchReports}
+          initialEditMode={detailEditMode}
+        />
       )}
     </div>
   )
