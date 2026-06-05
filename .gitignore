@@ -58,3 +58,9 @@ mobile/*.apk
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Test uploads (generated during local testing)
+backend/test_uploads/
+
+# Claude Code local settings
+.claude/
