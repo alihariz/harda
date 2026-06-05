@@ -103,6 +103,68 @@ Web app is now at `http://localhost:5173`.
 
 ---
 
+---
+
+## Production / Homelab deployment (Docker)
+
+**Prerequisites:** Docker + Docker Compose installed on your homelab server.
+
+```bash
+git clone https://github.com/jessiechang03/HARDA-CI-CD.git
+cd HARDA-CI-CD
+
+# 1. Create your env file
+cp .env.example .env
+# Edit .env — fill in POSTGRES_PASSWORD, SECRET_KEY, JWT_SECRET_KEY,
+# GOOGLE_MAPS_API_KEY, VITE_GOOGLE_MAPS_API_KEY, and VITE_API_BASE_URL
+
+# 2. Build and start all services
+docker compose up -d --build
+```
+
+Services:
+- Frontend (web app): `http://YOUR_HOMELAB_IP`
+- Backend (API): `http://YOUR_HOMELAB_IP:5000`
+
+Migrations and seed data run automatically on first boot via `entrypoint.sh`.
+
+**To view logs:**
+```bash
+docker compose logs -f backend
+```
+
+**To stop:**
+```bash
+docker compose down
+```
+
+**Data is persisted** in Docker volumes (`postgres_data`, `uploads_data`) — safe across restarts and `down/up` cycles. To fully reset: `docker compose down -v`.
+
+---
+
+## Mobile APK (for physical device install)
+
+The mobile app is built with Expo. Use **EAS Build** (free tier, cloud — no Android Studio needed):
+
+```bash
+cd mobile
+npm install -g eas-cli
+eas login                        # create a free Expo account if needed
+eas build:configure              # generates eas.json (first time only)
+
+# Store your Maps key as an EAS secret (replaces the placeholder in app.config.js)
+eas secret:create --scope project --name EXPO_PUBLIC_GOOGLE_MAPS_API_KEY --value "your-key"
+
+# Build an APK (Android — installable directly)
+eas build --platform android --profile preview
+```
+
+Once the build finishes, EAS gives you a download link. Install the `.apk` on any Android device — no Play Store needed.
+
+> **For iOS:** use `--platform ios` and you'll need an Apple Developer account for device distribution.
+
+---
+
 ## Project structure
 
 ```

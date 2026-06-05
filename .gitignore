@@ -64,3 +64,6 @@ backend/test_uploads/
 
 # Claude Code local settings
 .claude/
+
+# Mobile local env
+mobile/.env
