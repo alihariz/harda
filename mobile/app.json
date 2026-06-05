@@ -20,7 +20,7 @@
         "NSLocationWhenInUseUsageDescription": "HARDA uses your location to geotag hazards you submit and show nearby reports on the map."
       },
       "config": {
-        "googleMapsApiKey": "AIzaSyAco-W5gHUNlmrvpi_Bwu1ogfjQLggJONA"
+        "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY"
       }
     },
     "android": {
@@ -36,7 +36,7 @@
       ],
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyAco-W5gHUNlmrvpi_Bwu1ogfjQLggJONA"
+          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY"
         }
       }
     },
