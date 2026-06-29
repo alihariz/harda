@@ -1,4 +1,5 @@
-from flask import Blueprint, request
+from flask import Blueprint, request, current_app
+from app import limiter
 from app.utils.responses import success, error
 from app.services.yolo_detection import YOLODetectionService
 from app.services.image_processing import ImageProcessingService
@@ -7,6 +8,7 @@ detection_bp = Blueprint("detection", __name__)
 
 
 @detection_bp.route("/analyse", methods=["POST"])
+@limiter.limit(lambda: current_app.config["RATELIMIT_DETECTION"])  # NFR8 — protect the expensive YOLO path
 def analyse():
     """UC001 / UC002 — Run YOLO on uploaded image.
     Returns: { hazard_type, confidence, bounding_boxes, severity_score,

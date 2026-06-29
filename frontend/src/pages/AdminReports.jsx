@@ -2,16 +2,17 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import api from '../api/axios'
+import { useI18n } from '../i18n/I18nContext'
 import ReportDetailModal from './ReportDetailModal'
 
 const STATUSES = ['submitted', 'verified', 'in_progress', 'resolved', 'rejected']
 
-const STATUS_META = {
-  submitted:   { colour: 'bg-gray-100 text-gray-600',    label: 'Submitted' },
-  verified:    { colour: 'bg-green-100 text-green-700',  label: 'Verified' },
-  in_progress: { colour: 'bg-yellow-100 text-yellow-700', label: 'In Progress' },
-  resolved:    { colour: 'bg-blue-100 text-blue-700',    label: 'Resolved' },
-  rejected:    { colour: 'bg-red-100 text-red-700',      label: 'Rejected' },
+const STATUS_COLOUR = {
+  submitted:   'bg-gray-100 text-gray-600',
+  verified:    'bg-green-100 text-green-700',
+  in_progress: 'bg-yellow-100 text-yellow-700',
+  resolved:    'bg-blue-100 text-blue-700',
+  rejected:    'bg-red-100 text-red-700',
 }
 
 function Toast({ message, type, onDismiss }) {
@@ -33,6 +34,7 @@ function Toast({ message, type, onDismiss }) {
 }
 
 export default function AdminReports() {
+  const { t, lang } = useI18n()
   const [searchParams] = useSearchParams()
   const [reports, setReports] = useState([])
   const [total, setTotal] = useState(0)
@@ -58,23 +60,23 @@ export default function AdminReports() {
   }
 
   async function deleteReport(reportId) {
-    if (!window.confirm(`Permanently delete Report #${reportId}? This cannot be undone.`)) return
+    if (!window.confirm(t('admin.deleteConfirm', { id: reportId }))) return
     try {
       await api.delete(`/reports/${reportId}`)
-      showToast(`Report #${reportId} deleted`)
+      showToast(t('admin.deleted', { id: reportId }))
       fetchReports()
     } catch {
-      showToast(`Failed to delete Report #${reportId}.`, 'error')
+      showToast(t('admin.deleteFailed', { id: reportId }), 'error')
     }
   }
 
   async function archiveReport(reportId) {
     try {
       await api.post(`/admin/reports/${reportId}/archive`)
-      showToast(`Report #${reportId} archived`)
+      showToast(t('admin.archived', { id: reportId }))
       fetchReports()
     } catch (e) {
-      showToast(e?.response?.data?.message ?? `Failed to archive Report #${reportId}.`, 'error')
+      showToast(e?.response?.data?.message ?? t('admin.archiveFailed', { id: reportId }), 'error')
     }
   }
 
@@ -89,9 +91,9 @@ export default function AdminReports() {
         setReports(data.data?.reports ?? [])
         setTotal(data.data?.total ?? 0)
       })
-      .catch(() => showToast('Failed to load reports.', 'error'))
+      .catch(() => showToast(t('admin.loadFailed'), 'error'))
       .finally(() => setLoading(false))
-  }, [filters, showArchived])
+  }, [filters, showArchived, t])
 
   useEffect(() => { fetchReports() }, [fetchReports])
 
@@ -118,9 +120,9 @@ export default function AdminReports() {
           ? { ...r, status: { ...(r.status ?? {}), status_name: newStatus } }
           : r
       ))
-      showToast(`Report #${reportId} → ${newStatus.replace('_', ' ')}`)
+      showToast(t('admin.statusChanged', { id: reportId, status: t(`status.${newStatus}`) }))
     } catch {
-      showToast(`Failed to update report #${reportId}.`, 'error')
+      showToast(t('admin.statusFailed', { id: reportId }), 'error')
     } finally {
       setUpdating(null)
     }
@@ -128,17 +130,21 @@ export default function AdminReports() {
 
   async function bulkAction(action) {
     if (selected.size === 0) return
+    const actionLabel = action === 'verified' ? t('status.verified')
+      : action === 'rejected' ? t('status.rejected')
+      : t('admin.archivedBadge')
     try {
       await api.post('/admin/reports/bulk-action', { report_ids: [...selected], action })
-      showToast(`${selected.size} report${selected.size !== 1 ? 's' : ''} updated to "${action.replace('_', ' ')}"`)
+      showToast(t('admin.bulkUpdated', { n: selected.size, action: actionLabel }))
       fetchReports()
       setSelected(new Set())
     } catch {
-      showToast('Bulk action failed. Please try again.', 'error')
+      showToast(t('admin.bulkFailed'), 'error')
     }
   }
 
   const allSelected = reports.length > 0 && selected.size === reports.length
+  const locale = lang === 'ms' ? 'ms-MY' : 'en-MY'
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
@@ -146,9 +152,9 @@ export default function AdminReports() {
 
       <div className="flex items-start justify-between mb-6 flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Report Queue</h1>
+          <h1 className="text-2xl font-bold text-gray-800">{t('admin.queueTitle')}</h1>
           <p className="text-gray-500 text-sm mt-0.5">
-            {loading ? 'Loading…' : `${total} report${total !== 1 ? 's' : ''} total`}
+            {loading ? t('common.loading') : t('admin.queueTotal', { n: total })}
           </p>
         </div>
 
@@ -159,9 +165,9 @@ export default function AdminReports() {
             onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
             className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 text-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-400"
           >
-            <option value="">All Statuses</option>
+            <option value="">{t('admin.allStatuses')}</option>
             {STATUSES.map((s) => (
-              <option key={s} value={s}>{STATUS_META[s]?.label ?? s}</option>
+              <option key={s} value={s}>{t(`status.${s}`)}</option>
             ))}
           </select>
           <select
@@ -169,10 +175,10 @@ export default function AdminReports() {
             onChange={(e) => setFilters((f) => ({ ...f, hazard_type: e.target.value }))}
             className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 text-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-400"
           >
-            <option value="">All Types</option>
-            <option value="pothole">Pothole</option>
-            <option value="faded_lane_marking">Faded Lane Marking</option>
-            <option value="uneven_surface">Uneven Surface</option>
+            <option value="">{t('map.allTypes')}</option>
+            <option value="pothole">{t('hazardType.pothole')}</option>
+            <option value="faded_lane_marking">{t('hazardType.faded_lane_marking')}</option>
+            <option value="uneven_surface">{t('hazardType.uneven_surface')}</option>
           </select>
           <button
             onClick={() => setShowArchived((v) => !v)}
@@ -181,14 +187,14 @@ export default function AdminReports() {
                 ? 'border-orange-400 bg-orange-50 text-orange-700 font-medium'
                 : 'border-gray-300 text-gray-600 hover:bg-gray-50'
             }`}
-            title={showArchived ? 'Hide archived reports' : 'Show archived reports'}
+            title={showArchived ? t('admin.hideArchivedTitle') : t('admin.showArchivedTitle')}
           >
-            {showArchived ? '⊙ Archived on' : '⊙ Show archived'}
+            {showArchived ? t('admin.archivedOn') : t('admin.showArchived')}
           </button>
           <button
             onClick={fetchReports}
             className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 text-gray-600 hover:bg-gray-50 transition-colors"
-            title="Refresh"
+            title={t('admin.refresh')}
           >
             ↺
           </button>
@@ -198,30 +204,30 @@ export default function AdminReports() {
       {/* Bulk actions bar */}
       {selected.size > 0 && (
         <div className="bg-orange-50 border border-orange-200 rounded-lg px-4 py-2.5 mb-4 flex items-center gap-3 flex-wrap text-sm">
-          <span className="text-orange-800 font-medium">{selected.size} selected</span>
+          <span className="text-orange-800 font-medium">{t('admin.selected', { n: selected.size })}</span>
           <button
             onClick={() => bulkAction('verified')}
             className="text-green-700 hover:underline font-medium"
           >
-            ✓ Verify all
+            {t('admin.verifyAll')}
           </button>
           <button
             onClick={() => bulkAction('rejected')}
             className="text-red-600 hover:underline font-medium"
           >
-            ✕ Reject all
+            {t('admin.rejectAll')}
           </button>
           <button
             onClick={() => bulkAction('archive')}
             className="text-gray-600 hover:underline font-medium"
           >
-            ↓ Archive all
+            {t('admin.archiveAll')}
           </button>
           <button
             onClick={() => setSelected(new Set())}
             className="ml-auto text-gray-500 hover:text-gray-700"
           >
-            Clear selection
+            {t('admin.clearSelection')}
           </button>
         </div>
       )}
@@ -231,7 +237,7 @@ export default function AdminReports() {
           <div className="w-8 h-8 border-4 border-orange-400 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : reports.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">No reports match the selected filters.</div>
+        <div className="text-center py-16 text-gray-400">{t('admin.noReports')}</div>
       ) : (
         <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto">
           <table className="w-full text-sm min-w-[700px]">
@@ -245,14 +251,14 @@ export default function AdminReports() {
                     className="rounded accent-orange-500"
                   />
                 </th>
-                <th className="px-4 py-3 text-left text-gray-600 font-medium">ID</th>
-                <th className="px-4 py-3 text-left text-gray-600 font-medium">Title</th>
-                <th className="px-4 py-3 text-left text-gray-600 font-medium">Type</th>
-                <th className="px-4 py-3 text-left text-gray-600 font-medium">Sev.</th>
-                <th className="px-4 py-3 text-left text-gray-600 font-medium">Conf.</th>
-                <th className="px-4 py-3 text-left text-gray-600 font-medium">Status</th>
-                <th className="px-4 py-3 text-left text-gray-600 font-medium">Date</th>
-                <th className="px-4 py-3 text-left text-gray-600 font-medium">Update Status</th>
+                <th className="px-4 py-3 text-left text-gray-600 font-medium">{t('admin.colId')}</th>
+                <th className="px-4 py-3 text-left text-gray-600 font-medium">{t('admin.colTitle')}</th>
+                <th className="px-4 py-3 text-left text-gray-600 font-medium">{t('admin.colType')}</th>
+                <th className="px-4 py-3 text-left text-gray-600 font-medium">{t('admin.colSeverity')}</th>
+                <th className="px-4 py-3 text-left text-gray-600 font-medium">{t('admin.colConfidence')}</th>
+                <th className="px-4 py-3 text-left text-gray-600 font-medium">{t('admin.colStatus')}</th>
+                <th className="px-4 py-3 text-left text-gray-600 font-medium">{t('admin.colDate')}</th>
+                <th className="px-4 py-3 text-left text-gray-600 font-medium">{t('admin.updateStatusCol')}</th>
                 <th className="px-4 py-3 w-10" />
               </tr>
             </thead>
@@ -260,7 +266,7 @@ export default function AdminReports() {
               {reports.map((r) => {
                 const statusName = r.status?.status_name ?? 'submitted'
                 const hazardName = r.hazard_type?.type_name ?? null
-                const meta = STATUS_META[statusName] ?? STATUS_META.submitted
+                const colour = STATUS_COLOUR[statusName] ?? STATUS_COLOUR.submitted
 
                 const isArchived = !!r.archived_at
                 const canArchive = !isArchived && (statusName === 'resolved' || statusName === 'rejected')
@@ -281,20 +287,20 @@ export default function AdminReports() {
                     </td>
                     <td className="px-4 py-3 text-gray-400 font-mono text-xs">#{r.report_id}</td>
                     <td className="px-4 py-3 text-gray-800 max-w-[180px]">
-                      <p className="truncate font-medium">{r.title ?? 'Untitled'}</p>
+                      <p className="truncate font-medium">{r.title ?? t('admin.untitled')}</p>
                       {r.location?.state && (
                         <p className="text-xs text-gray-400 truncate">{r.location.state}</p>
                       )}
                     </td>
-                    <td className="px-4 py-3 capitalize whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-4 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       {hazardName ? (
-                        <span className="text-gray-600">{hazardName.replace(/_/g, ' ')}</span>
+                        <span className="text-gray-600">{t(`hazardType.${hazardName}`)}</span>
                       ) : (
                         <button
                           onClick={() => openModal(r.report_id, true)}
                           className="text-xs text-amber-600 hover:text-amber-800 font-medium hover:underline"
                         >
-                          Set type →
+                          {t('admin.setType')}
                         </button>
                       )}
                     </td>
@@ -315,19 +321,19 @@ export default function AdminReports() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${meta.colour}`}>
-                          {meta.label}
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colour}`}>
+                          {t(`status.${statusName}`)}
                         </span>
                         {isArchived && (
                           <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
-                            Archived
+                            {t('admin.archivedBadge')}
                           </span>
                         )}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs">
                       {r.report_date
-                        ? new Date(r.report_date).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })
+                        ? new Date(r.report_date).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' })
                         : '—'}
                     </td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -338,7 +344,7 @@ export default function AdminReports() {
                         className="text-xs border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange-400 disabled:opacity-50 bg-white"
                       >
                         {STATUSES.map((s) => (
-                          <option key={s} value={s}>{STATUS_META[s]?.label ?? s}</option>
+                          <option key={s} value={s}>{t(`status.${s}`)}</option>
                         ))}
                       </select>
                       {updating === r.report_id && (
@@ -350,7 +356,7 @@ export default function AdminReports() {
                         {canArchive && (
                           <button
                             onClick={() => archiveReport(r.report_id)}
-                            title="Archive report"
+                            title={t('admin.archived', { id: r.report_id })}
                             className="text-gray-300 hover:text-gray-600 transition-colors p-1 rounded"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -361,7 +367,7 @@ export default function AdminReports() {
                         )}
                         <button
                           onClick={() => deleteReport(r.report_id)}
-                          title="Delete report"
+                          title={t('admin.deleteConfirm', { id: r.report_id })}
                           className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

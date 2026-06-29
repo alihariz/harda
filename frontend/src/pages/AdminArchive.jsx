@@ -6,6 +6,7 @@
 //          POST /admin/reports/:id/unarchive             (admin_required)
 import { useEffect, useState, useCallback } from 'react'
 import api from '../api/axios'
+import { useI18n } from '../i18n/I18nContext'
 import ReportDetailModal from './ReportDetailModal'
 
 const MY_STATES = [
@@ -13,8 +14,6 @@ const MY_STATES = [
   'Negeri Sembilan', 'Pahang', 'Penang', 'Perak', 'Perlis', 'Putrajaya',
   'Sabah', 'Sarawak', 'Selangor', 'Terengganu',
 ]
-
-const SEVERITY_LABELS = ['', 'Very Low', 'Low', 'Medium', 'High', 'Critical']
 
 const STATUS_BADGE = {
   resolved: 'bg-blue-100 text-blue-700',
@@ -28,14 +27,8 @@ function imgUrl(filePath) {
   return `${API_ORIGIN}/${filePath}`
 }
 
-function fmtDate(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('en-MY', {
-    day: 'numeric', month: 'short', year: 'numeric',
-  })
-}
-
 function SeverityPips({ score }) {
+  const { t } = useI18n()
   if (!score) return <span className="text-gray-400 text-xs">—</span>
   const colour = score >= 4 ? 'bg-red-500' : score >= 3 ? 'bg-yellow-400' : 'bg-green-400'
   return (
@@ -43,20 +36,20 @@ function SeverityPips({ score }) {
       {[1, 2, 3, 4, 5].map((i) => (
         <span key={i} className={`inline-block w-2 h-2 rounded-full ${i <= score ? colour : 'bg-gray-200'}`} />
       ))}
-      <span className="text-xs text-gray-500 ml-1">{SEVERITY_LABELS[score]}</span>
+      <span className="text-xs text-gray-500 ml-1">{t(`severity.${score}`)}</span>
     </span>
   )
 }
 
-function ArchiveCard({ report, onClick, onUnarchive, unarchiving }) {
+function ArchiveCard({ report, onClick, onUnarchive, unarchiving, t, fmtDate }) {
   const before = report.before_image
   const after = report.after_image
   const loc = report.location
-  const hazardName = report.hazard_type?.type_name?.replace(/_/g, ' ') ?? '—'
+  const hazardKey = report.hazard_type?.type_name ?? null
+  const hazardName = hazardKey ? t(`hazardType.${hazardKey}`) : '—'
   const teamName = report.assigned_team?.team_name ?? null
   const statusName = report.status?.status_name ?? 'resolved'
   const badgeCls = STATUS_BADGE[statusName] ?? STATUS_BADGE.resolved
-  const statusLabel = statusName === 'rejected' ? 'Rejected' : 'Resolved'
 
   return (
     <div className="w-full text-left bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:border-orange-300 transition-all group">
@@ -65,32 +58,32 @@ function ArchiveCard({ report, onClick, onUnarchive, unarchiving }) {
         <div className="grid grid-cols-2 divide-x divide-gray-100 bg-gray-50">
           <div className="relative">
             <span className="absolute top-2 left-2 z-10 text-xs font-medium bg-black/50 text-white px-2 py-0.5 rounded-full">
-              Before
+              {t('admin.before')}
             </span>
             {before ? (
               <img
                 src={imgUrl(before.file_path)}
-                alt="Before"
+                alt={t('admin.before')}
                 className="w-full aspect-video object-cover"
                 onError={(e) => { e.currentTarget.style.display = 'none' }}
               />
             ) : (
-              <div className="w-full aspect-video flex items-center justify-center text-gray-300 text-xs">No photo</div>
+              <div className="w-full aspect-video flex items-center justify-center text-gray-300 text-xs">{t('admin.noPhoto')}</div>
             )}
           </div>
           <div className="relative">
             <span className="absolute top-2 left-2 z-10 text-xs font-medium bg-emerald-600/80 text-white px-2 py-0.5 rounded-full">
-              After ✓
+              {t('admin.after')}
             </span>
             {after ? (
               <img
                 src={imgUrl(after.file_path)}
-                alt="After"
+                alt={t('admin.after')}
                 className="w-full aspect-video object-cover"
                 onError={(e) => { e.currentTarget.style.display = 'none' }}
               />
             ) : (
-              <div className="w-full aspect-video flex items-center justify-center text-gray-300 text-xs">No photo</div>
+              <div className="w-full aspect-video flex items-center justify-center text-gray-300 text-xs">{t('admin.noPhoto')}</div>
             )}
           </div>
         </div>
@@ -101,13 +94,13 @@ function ArchiveCard({ report, onClick, onUnarchive, unarchiving }) {
         <button className="w-full text-left" onClick={onClick}>
           <div className="flex items-start justify-between gap-2">
             <p className="font-semibold text-gray-800 text-sm truncate group-hover:text-orange-600 transition-colors">
-              {report.title ?? 'Untitled'}
+              {report.title ?? t('admin.untitled')}
             </p>
             <span className="shrink-0 text-xs font-mono text-gray-400">#{report.report_id}</span>
           </div>
 
           <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-gray-600">
-            <span className="capitalize">{hazardName}</span>
+            <span>{hazardName}</span>
             <SeverityPips score={report.severity_score} />
 
             {loc?.state && <span className="text-gray-400">{loc.state}</span>}
@@ -123,15 +116,15 @@ function ArchiveCard({ report, onClick, onUnarchive, unarchiving }) {
 
         <div className="mt-2.5 pt-2.5 border-t border-gray-100 flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
-            <span className={`font-medium px-2 py-0.5 rounded-full ${badgeCls}`}>{statusLabel}</span>
-            <span className="text-gray-400">Archived {fmtDate(report.archived_at)}</span>
+            <span className={`font-medium px-2 py-0.5 rounded-full ${badgeCls}`}>{t(`status.${statusName}`)}</span>
+            <span className="text-gray-400">{t('admin.archivedDate', { date: fmtDate(report.archived_at) })}</span>
           </div>
           <button
             onClick={(e) => { e.stopPropagation(); onUnarchive(report.report_id) }}
             disabled={unarchiving === report.report_id}
             className="text-gray-400 hover:text-orange-600 transition-colors font-medium disabled:opacity-50"
           >
-            {unarchiving === report.report_id ? 'Restoring…' : 'Unarchive'}
+            {unarchiving === report.report_id ? t('admin.restoring') : t('admin.unarchive')}
           </button>
         </div>
       </div>
@@ -140,6 +133,7 @@ function ArchiveCard({ report, onClick, onUnarchive, unarchiving }) {
 }
 
 export default function AdminArchive() {
+  const { t, lang } = useI18n()
   const [reports, setReports] = useState([])
   const [total, setTotal] = useState(0)
   const [teams, setTeams] = useState([])
@@ -149,6 +143,10 @@ export default function AdminArchive() {
   const [error, setError] = useState(null)
   const [filters, setFilters] = useState({ state: '', team_id: '', status: '' })
   const [detailId, setDetailId] = useState(null)
+
+  const locale = lang === 'ms' ? 'ms-MY' : 'en-MY'
+  const fmtDate = (iso) =>
+    iso ? new Date(iso).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' }) : '—'
 
   const fetchArchive = useCallback(async () => {
     setLoading(true)
@@ -162,11 +160,11 @@ export default function AdminArchive() {
       setReports(data.data?.reports ?? [])
       setTotal(data.data?.total ?? 0)
     } catch {
-      setError('Failed to load archive. Check that the backend is running.')
+      setError(t('admin.archiveLoadFailed'))
     } finally {
       setLoading(false)
     }
-  }, [filters])
+  }, [filters, t])
 
   useEffect(() => { fetchArchive() }, [fetchArchive])
 
@@ -182,7 +180,7 @@ export default function AdminArchive() {
       await api.post(`/admin/reports/${reportId}/unarchive`)
       fetchArchive()
     } catch {
-      setError(`Failed to unarchive report #${reportId}.`)
+      setError(t('admin.unarchiveFailed', { id: reportId }))
     } finally {
       setUnarchiving(null)
     }
@@ -208,7 +206,7 @@ export default function AdminArchive() {
       a.remove()
       URL.revokeObjectURL(url)
     } catch {
-      setError('CSV export failed.')
+      setError(t('admin.exportFailed'))
     } finally {
       setExporting(false)
     }
@@ -220,9 +218,9 @@ export default function AdminArchive() {
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Hazard Archive</h1>
+          <h1 className="text-2xl font-bold text-gray-800">{t('admin.archiveHeading')}</h1>
           <p className="text-gray-500 text-sm mt-0.5">
-            {loading ? 'Loading…' : `${total} archived report${total !== 1 ? 's' : ''} — resolved and rejected`}
+            {loading ? t('common.loading') : t('admin.archiveCount', { n: total })}
           </p>
         </div>
         <button
@@ -234,7 +232,7 @@ export default function AdminArchive() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
           </svg>
-          {exporting ? 'Exporting…' : 'Export CSV'}
+          {exporting ? t('admin.exporting') : t('admin.exportCsv')}
         </button>
       </div>
 
@@ -245,9 +243,9 @@ export default function AdminArchive() {
           onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
           className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 text-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
         >
-          <option value="">All Statuses</option>
-          <option value="resolved">Resolved only</option>
-          <option value="rejected">Rejected only</option>
+          <option value="">{t('admin.allStatuses')}</option>
+          <option value="resolved">{t('admin.resolvedOnly')}</option>
+          <option value="rejected">{t('admin.rejectedOnly')}</option>
         </select>
 
         <select
@@ -255,7 +253,7 @@ export default function AdminArchive() {
           onChange={(e) => setFilters((f) => ({ ...f, state: e.target.value }))}
           className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 text-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
         >
-          <option value="">All States</option>
+          <option value="">{t('admin.allStates')}</option>
           {MY_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
 
@@ -264,16 +262,16 @@ export default function AdminArchive() {
           onChange={(e) => setFilters((f) => ({ ...f, team_id: e.target.value }))}
           className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 text-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
         >
-          <option value="">All Teams</option>
-          {teams.map((t) => (
-            <option key={t.team_id} value={t.team_id}>{t.team_name}</option>
+          <option value="">{t('admin.allTeams')}</option>
+          {teams.map((team) => (
+            <option key={team.team_id} value={team.team_id}>{team.team_name}</option>
           ))}
         </select>
 
         <button
           onClick={fetchArchive}
           className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 text-gray-600 hover:bg-gray-50 transition-colors"
-          title="Refresh"
+          title={t('admin.refresh')}
         >
           ↺
         </button>
@@ -291,9 +289,9 @@ export default function AdminArchive() {
         </div>
       ) : total === 0 ? (
         <div className="text-center py-24">
-          <p className="text-gray-400 text-lg">No archived reports yet.</p>
+          <p className="text-gray-400 text-lg">{t('admin.archiveEmpty')}</p>
           <p className="text-gray-300 text-sm mt-1">
-            Resolved or rejected reports will appear here once an admin archives them.
+            {t('admin.archiveEmptyHint')}
           </p>
         </div>
       ) : (
@@ -305,6 +303,8 @@ export default function AdminArchive() {
               onClick={() => setDetailId(r.report_id)}
               onUnarchive={handleUnarchive}
               unarchiving={unarchiving}
+              t={t}
+              fmtDate={fmtDate}
             />
           ))}
         </div>

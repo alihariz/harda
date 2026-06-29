@@ -2,10 +2,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useI18n } from '../i18n/I18nContext'
 import api from '../api/axios'
 
 export default function Login() {
   const { login } = useAuth()
+  const { t } = useI18n()
   const navigate = useNavigate()
   const [mode, setMode] = useState('user') // 'user' | 'admin'
   const [form, setForm] = useState({ email: '', password: '' })
@@ -31,7 +33,7 @@ export default function Login() {
       )
       navigate(mode === 'admin' ? '/admin' : '/')
     } catch (err) {
-      setError(err.response?.data?.message ?? 'Login failed. Check your credentials.')
+      setError(err.response?.data?.message ?? t('login.failed'))
     } finally {
       setLoading(false)
     }
@@ -43,7 +45,7 @@ export default function Login() {
         {/* Logo */}
         <div className="text-center mb-8">
           <span className="text-3xl font-bold text-orange-500">HARDA</span>
-          <p className="text-gray-500 text-sm mt-1">Sign in to your account</p>
+          <p className="text-gray-500 text-sm mt-1">{t('login.subtitle')}</p>
         </div>
 
         {/* Mode toggle */}
@@ -52,18 +54,18 @@ export default function Login() {
             <button
               key={m}
               onClick={() => { setMode(m); setError(null) }}
-              className={`flex-1 text-sm font-medium py-1.5 rounded-md transition-colors capitalize ${
+              className={`flex-1 text-sm font-medium py-1.5 rounded-md transition-colors ${
                 mode === m ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              {m === 'admin' ? 'Admin' : 'User'}
+              {m === 'admin' ? t('login.admin') : t('login.user')}
             </button>
           ))}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('login.emailLabel')}</label>
             <input
               type="email"
               name="email"
@@ -75,7 +77,7 @@ export default function Login() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('login.passwordLabel')}</label>
             <input
               type="password"
               name="password"
@@ -96,21 +98,21 @@ export default function Login() {
             disabled={loading}
             className="w-full bg-orange-500 hover:bg-orange-400 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-2.5 rounded-lg transition-colors text-sm mt-2"
           >
-            {loading ? 'Signing in…' : 'Sign In'}
+            {loading ? t('login.signingIn') : t('login.signIn')}
           </button>
         </form>
 
         <div className="mt-6 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-xs text-gray-500 space-y-0.5">
-          <p className="font-medium text-gray-600 mb-1">Demo credentials</p>
+          <p className="font-medium text-gray-600 mb-1">{t('login.demoCreds')}</p>
           {mode === 'user' ? (
             <>
-              <p>Email: <span className="font-mono text-gray-700">user@harda.my</span></p>
-              <p>Password: <span className="font-mono text-gray-700">User123!</span></p>
+              <p>{t('login.emailLabel')}: <span className="font-mono text-gray-700">user@harda.my</span></p>
+              <p>{t('login.passwordLabel')}: <span className="font-mono text-gray-700">User123!</span></p>
             </>
           ) : (
             <>
-              <p>Email: <span className="font-mono text-gray-700">admin@harda.my</span></p>
-              <p>Password: <span className="font-mono text-gray-700">Admin123!</span></p>
+              <p>{t('login.emailLabel')}: <span className="font-mono text-gray-700">admin@harda.my</span></p>
+              <p>{t('login.passwordLabel')}: <span className="font-mono text-gray-700">Admin123!</span></p>
             </>
           )}
         </div>

@@ -11,11 +11,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
 import { colors, hazardColor, radius, spacing, typography } from '@/lib/theme';
 import type { HazardReport } from '@/lib/types';
 
 export default function MyReports() {
   const { user, role } = useAuth();
+  const { t } = useI18n();
   const [reports, setReports] = useState<HazardReport[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -38,9 +40,9 @@ export default function MyReports() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Text style={[typography.h2, { color: '#fff' }]}>My reports</Text>
+        <Text style={[typography.h2, { color: '#fff' }]}>{t('myReports.title')}</Text>
         <Text style={[typography.caption, { color: '#cbd5e1' }]}>
-          {role === 'user' ? 'Tracks every hazard you submit' : 'Sign in as a user to see your history'}
+          {role === 'user' ? t('myReports.subUser') : t('myReports.subGuest')}
         </Text>
       </View>
       <FlatList
@@ -51,8 +53,8 @@ export default function MyReports() {
         ListEmptyComponent={
           <Text style={[typography.body, { color: colors.muted, textAlign: 'center', marginTop: spacing.xxl }]}>
             {role === 'user'
-              ? 'No reports yet — tap Submit to add your first.'
-              : 'Guest mode: submissions are anonymous and not tracked here.'}
+              ? t('myReports.emptyUser')
+              : t('myReports.emptyGuest')}
           </Text>
         }
         renderItem={({ item }) => (
@@ -61,8 +63,8 @@ export default function MyReports() {
             <View style={{ flex: 1 }}>
               <Text style={typography.h3} numberOfLines={1}>{item.title}</Text>
               <Text style={[typography.caption, { marginTop: 2 }]}>
-                #{item.report_id} • {item.hazard_type?.type_name ?? 'awaiting classification'}
-                {item.severity_score ? ` • severity ${item.severity_score}` : ''}
+                #{item.report_id} • {item.hazard_type?.type_name ? t(`hazardType.${item.hazard_type.type_name}`) : t('myReports.awaitingClassification')}
+                {item.severity_score ? ` • ${t('myReports.severity', { n: item.severity_score })}` : ''}
               </Text>
               <View style={{ marginTop: spacing.xs }}>
                 <StatusBadge status={item.status?.status_name} />

@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Text } from 'react-native';
 
+import { useI18n } from '@/lib/i18n';
 import { colors } from '@/lib/theme';
 
 const Icon = ({ name, focused }: { name: string; focused: boolean }) => (
@@ -8,6 +9,7 @@ const Icon = ({ name, focused }: { name: string; focused: boolean }) => (
 );
 
 export default function CrewLayout() {
+  const { t } = useI18n();
   return (
     <Tabs
       screenOptions={{
@@ -18,11 +20,11 @@ export default function CrewLayout() {
     >
       <Tabs.Screen
         name="index"
-        options={{ title: 'Inbox', tabBarIcon: ({ focused }) => <Icon name="📥" focused={focused} /> }}
+        options={{ title: t('tabs.inbox'), tabBarIcon: ({ focused }) => <Icon name="📥" focused={focused} /> }}
       />
       <Tabs.Screen
         name="profile"
-        options={{ title: 'Profile', tabBarIcon: ({ focused }) => <Icon name="👤" focused={focused} /> }}
+        options={{ title: t('tabs.crewProfile'), tabBarIcon: ({ focused }) => <Icon name="👤" focused={focused} /> }}
       />
       <Tabs.Screen name="assignment/[id]" options={{ href: null }} />
       <Tabs.Screen name="resolve/[id]" options={{ href: null }} />

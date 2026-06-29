@@ -13,10 +13,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { StatusBadge } from '@/components/StatusBadge';
 import { api } from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
 import { colors, hazardColor, radius, spacing, typography } from '@/lib/theme';
 import type { HazardReport } from '@/lib/types';
 
 export default function AssignmentDetail() {
+  const { t } = useI18n();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [report, setReport] = useState<HazardReport | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,7 +28,7 @@ export default function AssignmentDetail() {
       try {
         setReport(await api.getReport(Number(id)));
       } catch (e) {
-        Alert.alert('Could not load assignment', e instanceof Error ? e.message : 'Unknown error');
+        Alert.alert(t('crew.loadAssignmentErr'), e instanceof Error ? e.message : t('common.unknownError'));
       } finally {
         setLoading(false);
       }
@@ -36,7 +38,7 @@ export default function AssignmentDetail() {
   if (loading || !report) {
     return (
       <SafeAreaView style={styles.safe}>
-        <Text style={[typography.body, { padding: spacing.lg }]}>Loading assignment…</Text>
+        <Text style={[typography.body, { padding: spacing.lg }]}>{t('crew.loadingAssignment')}</Text>
       </SafeAreaView>
     );
   }
@@ -58,14 +60,14 @@ export default function AssignmentDetail() {
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxl }}>
         <View style={styles.header}>
           <Pressable onPress={() => router.back()}>
-            <Text style={{ color: '#fff' }}>← Back</Text>
+            <Text style={{ color: '#fff' }}>{t('common.back')}</Text>
           </Pressable>
           <Text style={[typography.h2, { color: '#fff', marginTop: spacing.sm }]}>{report.title}</Text>
-          <Text style={[typography.caption, { color: '#cbd5e1' }]}>Assignment #{report.report_id}</Text>
+          <Text style={[typography.caption, { color: '#cbd5e1' }]}>{t('crew.assignmentNo', { id: report.report_id })}</Text>
           <View style={{ marginTop: spacing.sm, flexDirection: 'row', gap: spacing.sm }}>
             <StatusBadge status={report.status?.status_name} />
             <View style={[styles.tag, { backgroundColor: hazardColor(report.hazard_type?.type_name) }]}>
-              <Text style={styles.tagText}>{report.hazard_type?.type_name ?? '—'}</Text>
+              <Text style={styles.tagText}>{report.hazard_type?.type_name ? t(`hazardType.${report.hazard_type.type_name}`) : '—'}</Text>
             </View>
           </View>
         </View>
@@ -79,7 +81,7 @@ export default function AssignmentDetail() {
             />
           ) : (
             <View style={[styles.photo, styles.photoEmpty]}>
-              <Text style={typography.caption}>No photo attached</Text>
+              <Text style={typography.caption}>{t('crew.noPhotoAttached')}</Text>
             </View>
           )}
 
@@ -116,15 +118,15 @@ export default function AssignmentDetail() {
           ) : null}
 
           <View style={styles.actions}>
-            <PrimaryButton title="Navigate to location" onPress={openInMaps} variant="secondary" />
+            <PrimaryButton title={t('crew.navigate')} onPress={openInMaps} variant="secondary" />
             <View style={{ height: spacing.sm }} />
             {isResolved ? (
               <Text style={[typography.body, { color: colors.success, textAlign: 'center' }]}>
-                ✓ Resolved on {report.resolution_date?.slice(0, 10)}
+                {t('crew.resolvedOn', { date: report.resolution_date?.slice(0, 10) ?? '' })}
               </Text>
             ) : (
               <PrimaryButton
-                title="Mark resolved (upload after-photo)"
+                title={t('crew.markResolved')}
                 onPress={() => router.push(`/(crew)/resolve/${report.report_id}`)}
               />
             )}
@@ -132,7 +134,7 @@ export default function AssignmentDetail() {
 
           {report.after_image ? (
             <View style={{ marginTop: spacing.lg }}>
-              <Text style={typography.h3}>After-photo</Text>
+              <Text style={typography.h3}>{t('crew.afterPhoto')}</Text>
               <Image
                 source={{ uri: api.baseUrl().replace('/api/v1', '') + '/' + report.after_image.file_path }}
                 style={styles.photo}

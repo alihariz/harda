@@ -11,9 +11,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Field } from '@/components/Field';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { api } from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
 import { colors, radius, spacing, typography } from '@/lib/theme';
 
 export default function PreviewScreen() {
+  const { t } = useI18n();
   const params = useLocalSearchParams<{
     uri: string; mime?: string; fileName?: string;
     lat?: string; lng?: string; gpsSource?: string;
@@ -31,14 +33,11 @@ export default function PreviewScreen() {
 
   const onSubmit = async () => {
     if (!params.uri) {
-      Alert.alert('No image', 'Go back and pick a photo first.');
+      Alert.alert(t('preview.noImageTitle'), t('preview.noImageMsg'));
       return;
     }
     if (!lat || !lng) {
-      Alert.alert(
-        'No GPS',
-        'EXIF and device GPS both failed. Type approximate latitude/longitude.'
-      );
+      Alert.alert(t('preview.noGpsTitle'), t('preview.noGpsMsg'));
       return;
     }
     setSubmitting(true);
@@ -58,7 +57,7 @@ export default function PreviewScreen() {
       const r = await api.submitReport(form);
       setResult({ report_id: r.report_id, detection: r.detection });
     } catch (e) {
-      Alert.alert('Submission failed', e instanceof Error ? e.message : 'Unknown error');
+      Alert.alert(t('preview.submitFailedTitle'), e instanceof Error ? e.message : t('common.unknownError'));
     } finally {
       setSubmitting(false);
     }
@@ -69,39 +68,39 @@ export default function PreviewScreen() {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <ScrollView contentContainerStyle={styles.scroll}>
-          <Text style={[typography.h1, { color: colors.success }]}>Submitted ✓</Text>
+          <Text style={[typography.h1, { color: colors.success }]}>{t('preview.submittedTitle')}</Text>
           <Text style={[typography.body, { color: colors.muted, marginTop: spacing.sm }]}>
-            Tracking ID #{result.report_id}
+            {t('preview.trackingId', { id: result.report_id })}
           </Text>
 
           <View style={styles.resultCard}>
             {d?.low_confidence || !d?.hazard_type ? (
               <>
-                <Text style={typography.h3}>Flagged for review</Text>
+                <Text style={typography.h3}>{t('preview.flaggedTitle')}</Text>
                 <Text style={[typography.body, { marginTop: spacing.sm }]}>
-                  Our AI wasn't confident enough to classify this automatically. An admin will review it before it appears on the map.
+                  {t('preview.flaggedMsg')}
                 </Text>
               </>
             ) : (
               <>
-                <Text style={typography.h3}>AI detected</Text>
+                <Text style={typography.h3}>{t('preview.aiDetected')}</Text>
                 <Text style={[styles.resultValue, { fontSize: 18, marginTop: spacing.xs }]}>
-                  {d.hazard_type.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                  {t(`hazardType.${d.hazard_type}`)}
                 </Text>
                 <Text style={[typography.body, { color: '#6b7280', marginTop: spacing.xs }]}>
-                  {((d.confidence ?? 0) * 100).toFixed(0)}% confidence
+                  {t('preview.confidence', { pct: ((d.confidence ?? 0) * 100).toFixed(0) })}
                 </Text>
               </>
             )}
           </View>
 
           <PrimaryButton
-            title="View my reports"
+            title={t('preview.viewReports')}
             onPress={() => router.replace('/(user)/my-reports')}
           />
           <View style={{ height: spacing.sm }} />
           <PrimaryButton
-            title="Submit another"
+            title={t('preview.submitAnother')}
             variant="secondary"
             onPress={() => router.replace('/(user)/capture')}
           />
@@ -113,41 +112,41 @@ export default function PreviewScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={typography.h1}>Review</Text>
+        <Text style={typography.h1}>{t('preview.review')}</Text>
 
         {params.uri ? (
           <Image source={{ uri: params.uri }} style={styles.preview} resizeMode="cover" />
         ) : null}
 
         <View style={styles.gpsBox}>
-          <Text style={typography.h3}>Location</Text>
+          <Text style={typography.h3}>{t('preview.location')}</Text>
           <Text style={typography.caption}>
             {params.gpsSource === 'exif'
-              ? 'GPS extracted from photo EXIF'
+              ? t('preview.gpsExif')
               : params.gpsSource === 'device'
-                ? 'GPS from your current device location'
-                : 'No GPS available — please enter manually'}
+                ? t('preview.gpsDevice')
+                : t('preview.gpsNone')}
           </Text>
-          <Field label="Latitude"  value={lat} onChangeText={setLat}  keyboardType="numeric" />
-          <Field label="Longitude" value={lng} onChangeText={setLng} keyboardType="numeric" />
+          <Field label={t('preview.latitude')}  value={lat} onChangeText={setLat}  keyboardType="numeric" />
+          <Field label={t('preview.longitude')} value={lng} onChangeText={setLng} keyboardType="numeric" />
         </View>
 
         <Field
-          label="Title (optional)"
+          label={t('preview.titleOptional')}
           value={title}
           onChangeText={setTitle}
-          placeholder="e.g. Pothole on Jalan Bukit Bintang"
+          placeholder={t('preview.titlePlaceholder')}
         />
         <Field
-          label="Description (optional)"
+          label={t('preview.descOptional')}
           value={description}
           onChangeText={setDescription}
-          placeholder="Any extra context?"
+          placeholder={t('preview.descPlaceholder')}
           multiline
           numberOfLines={3}
         />
 
-        <PrimaryButton title="Submit hazard report" onPress={onSubmit} loading={submitting} />
+        <PrimaryButton title={t('preview.submitBtn')} onPress={onSubmit} loading={submitting} />
       </ScrollView>
     </SafeAreaView>
   );

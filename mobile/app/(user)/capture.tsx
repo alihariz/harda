@@ -13,9 +13,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { extractFromExif, getDeviceGps } from '@/lib/exif';
+import { useI18n } from '@/lib/i18n';
 import { colors, radius, spacing, typography } from '@/lib/theme';
 
 export default function CaptureScreen() {
+  const { t } = useI18n();
   const [busy, setBusy] = useState<'camera' | 'library' | null>(null);
 
   const handleResult = async (asset: ImagePicker.ImagePickerAsset) => {
@@ -40,7 +42,7 @@ export default function CaptureScreen() {
   const pickFromCamera = async () => {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('Camera permission needed', 'Allow camera access to capture hazards.');
+      Alert.alert(t('capture.camPermTitle'), t('capture.camPermMsg'));
       return;
     }
     setBusy('camera');
@@ -57,7 +59,7 @@ export default function CaptureScreen() {
   const pickFromLibrary = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('Library permission needed', 'Allow photo access to pick existing hazards.');
+      Alert.alert(t('capture.libPermTitle'), t('capture.libPermMsg'));
       return;
     }
     setBusy('library');
@@ -74,22 +76,19 @@ export default function CaptureScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={[typography.h1, styles.title]}>Report a hazard</Text>
+        <Text style={[typography.h1, styles.title]}>{t('capture.title')}</Text>
         <Text style={[typography.body, styles.subtitle]}>
-          Snap a photo of the pothole, faded lane marking, or uneven surface.
-          We'll auto-classify it with YOLO and geotag it from the photo's GPS data.
+          {t('capture.subtitle')}
         </Text>
 
         <View style={styles.card}>
-          <PrimaryButton title="📷  Take photo" onPress={pickFromCamera} loading={busy === 'camera'} />
+          <PrimaryButton title={t('capture.takePhoto')} onPress={pickFromCamera} loading={busy === 'camera'} />
           <View style={{ height: spacing.sm }} />
-          <PrimaryButton title="🖼  Pick from library" onPress={pickFromLibrary} loading={busy === 'library'} variant="secondary" />
+          <PrimaryButton title={t('capture.pickLibrary')} onPress={pickFromLibrary} loading={busy === 'library'} variant="secondary" />
         </View>
 
         <Text style={styles.hint}>
-          ✓ JPEG or PNG, max 10 MB{'\n'}
-          ✓ GPS extracted from photo EXIF when present; device location used otherwise{'\n'}
-          ✓ All submissions are auto-classified, then reviewed by an admin
+          {t('capture.hint')}
         </Text>
       </ScrollView>
     </SafeAreaView>

@@ -1,12 +1,17 @@
-from flask import Blueprint, request
+from flask import Blueprint, request, current_app
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
+from app import limiter
 from app.utils.responses import success, error
 from app.services.user_management import UserManagementService
 
 auth_bp = Blueprint("auth", __name__)
 
+# NFR8 — tighter limit on auth endpoints to blunt credential-stuffing / brute force.
+_auth_limit = lambda: current_app.config["RATELIMIT_AUTH"]
+
 
 @auth_bp.route("/register", methods=["POST"])
+@limiter.limit(_auth_limit)
 def register():
     """UC006 – User registration."""
     data = request.get_json()
@@ -17,6 +22,7 @@ def register():
 
 
 @auth_bp.route("/login", methods=["POST"])
+@limiter.limit(_auth_limit)
 def login():
     """User login → returns JWT. Token claims include `role` (user/crew) and
     `team_id` (for crew) so the mobile app can route to user vs crew tabs
@@ -34,6 +40,7 @@ def login():
 
 
 @auth_bp.route("/admin/login", methods=["POST"])
+@limiter.limit(_auth_limit)
 def admin_login():
     """Admin login → returns JWT with admin role claim."""
     data = request.get_json()

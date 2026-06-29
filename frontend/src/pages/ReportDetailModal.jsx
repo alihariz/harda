@@ -10,16 +10,15 @@
 import { useEffect, useState, useCallback } from 'react'
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api'
 import api from '../api/axios'
+import { useI18n } from '../i18n/I18nContext'
 
-const STATUS_META = {
-  submitted:   { colour: 'bg-gray-100 text-gray-700',     label: 'Submitted' },
-  verified:    { colour: 'bg-green-100 text-green-700',   label: 'Verified' },
-  in_progress: { colour: 'bg-yellow-100 text-yellow-700', label: 'In Progress' },
-  resolved:    { colour: 'bg-blue-100 text-blue-700',     label: 'Resolved' },
-  rejected:    { colour: 'bg-red-100 text-red-700',       label: 'Rejected' },
+const STATUS_COLOUR = {
+  submitted:   'bg-gray-100 text-gray-700',
+  verified:    'bg-green-100 text-green-700',
+  in_progress: 'bg-yellow-100 text-yellow-700',
+  resolved:    'bg-blue-100 text-blue-700',
+  rejected:    'bg-red-100 text-red-700',
 }
-
-const SEVERITY_LABELS = ['', 'Very Low', 'Low', 'Medium', 'High', 'Critical']
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:5000/api/v1').replace('/api/v1', '')
 
@@ -28,9 +27,9 @@ function imgUrl(filePath) {
   return `${API_ORIGIN}/${filePath}`
 }
 
-function fmtDate(iso) {
+function fmtDate(iso, locale = 'en-MY') {
   if (!iso) return null
-  return new Date(iso).toLocaleString('en-MY', {
+  return new Date(iso).toLocaleString(locale, {
     day: 'numeric', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
   })
@@ -45,6 +44,7 @@ function Spinner({ size = 8 }) {
 }
 
 function SeverityDots({ score }) {
+  const { t } = useI18n()
   if (!score) return <span className="text-gray-400">—</span>
   const dotColour = score >= 4 ? 'bg-red-500' : score >= 3 ? 'bg-yellow-400' : 'bg-green-400'
   return (
@@ -52,7 +52,7 @@ function SeverityDots({ score }) {
       {[1, 2, 3, 4, 5].map((i) => (
         <span key={i} className={`inline-block w-2.5 h-2.5 rounded-full ${i <= score ? dotColour : 'bg-gray-200'}`} />
       ))}
-      <span className="text-xs text-gray-500 ml-1">{SEVERITY_LABELS[score]}</span>
+      <span className="text-xs text-gray-500 ml-1">{t(`severity.${score}`)}</span>
     </span>
   )
 }
@@ -78,12 +78,13 @@ function Section({ title, children, action }) {
   )
 }
 
-function Timeline({ report }) {
+function Timeline({ report, locale }) {
+  const { t } = useI18n()
   const steps = [
-    { label: 'Reported',  date: report.report_date },
-    { label: 'Validated', date: report.validation_date },
-    { label: 'Assigned',  date: report.assigned_at },
-    { label: 'Resolved',  date: report.resolution_date },
+    { label: t('admin.reported'),  date: report.report_date },
+    { label: t('admin.validated'), date: report.validation_date },
+    { label: t('admin.assigned'),  date: report.assigned_at },
+    { label: t('status.resolved'), date: report.resolution_date },
   ]
   return (
     <div className="flex items-start">
@@ -102,7 +103,7 @@ function Timeline({ report }) {
               {step.label}
             </p>
             {step.date && (
-              <p className="text-xs text-gray-400 mt-0.5 leading-tight">{fmtDate(step.date)}</p>
+              <p className="text-xs text-gray-400 mt-0.5 leading-tight">{fmtDate(step.date, locale)}</p>
             )}
           </div>
         )
@@ -131,17 +132,18 @@ function MapPreview({ lat, lng }) {
 }
 
 function PhotoPair({ before, after }) {
+  const { t } = useI18n()
   if (!before && !after) return null
   const both = before && after
   return (
-    <Section title="Photos">
+    <Section title={t('admin.photos')}>
       <div className={`grid gap-4 ${both ? 'grid-cols-2' : 'grid-cols-1 max-w-xs'}`}>
         {before && (
           <div>
-            <p className="text-xs font-medium text-gray-400 mb-1.5">Before</p>
+            <p className="text-xs font-medium text-gray-400 mb-1.5">{t('admin.before')}</p>
             <img
               src={imgUrl(before.file_path)}
-              alt="Before"
+              alt={t('admin.before')}
               className="w-full aspect-video object-cover rounded-xl border border-gray-200 bg-gray-100"
               onError={(e) => { e.currentTarget.style.display = 'none' }}
             />
@@ -149,10 +151,10 @@ function PhotoPair({ before, after }) {
         )}
         {after && (
           <div>
-            <p className="text-xs font-medium text-emerald-600 mb-1.5">After ✓</p>
+            <p className="text-xs font-medium text-emerald-600 mb-1.5">{t('admin.after')}</p>
             <img
               src={imgUrl(after.file_path)}
-              alt="After"
+              alt={t('admin.after')}
               className="w-full aspect-video object-cover rounded-xl border border-emerald-200 bg-gray-100"
               onError={(e) => { e.currentTarget.style.display = 'none' }}
             />
@@ -164,6 +166,7 @@ function PhotoPair({ before, after }) {
 }
 
 function ActionPanel({ report, teams, onAction }) {
+  const { t } = useI18n()
   const [selectedTeamId, setSelectedTeamId] = useState('')
   const [busy, setBusy] = useState(false)
   const status = report?.status?.status_name
@@ -182,7 +185,7 @@ function ActionPanel({ report, teams, onAction }) {
   if (status === 'resolved' || status === 'rejected') return null
 
   return (
-    <Section title="Actions">
+    <Section title={t('admin.actionsTitle')}>
       {status === 'submitted' && (
         <div className="flex gap-3">
           <button
@@ -190,14 +193,14 @@ function ActionPanel({ report, teams, onAction }) {
             disabled={busy}
             className="flex-1 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-sm font-semibold rounded-xl px-4 py-2.5 transition-colors"
           >
-            {busy ? 'Processing…' : '✓ Validate'}
+            {busy ? t('admin.processing') : t('admin.validateBtn')}
           </button>
           <button
             onClick={() => validate('rejected')}
             disabled={busy}
             className="flex-1 border border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50 text-sm font-semibold rounded-xl px-4 py-2.5 transition-colors"
           >
-            ✕ Reject
+            {t('admin.rejectBtn')}
           </button>
         </div>
       )}
@@ -206,18 +209,18 @@ function ActionPanel({ report, teams, onAction }) {
         <div className="flex gap-3 items-end flex-wrap">
           <div className="flex-1 min-w-[200px]">
             <label className="text-xs font-medium text-gray-500 block mb-1.5">
-              Assign field-crew team
+              {t('admin.assignTeamLabel')}
             </label>
             <select
               value={selectedTeamId}
               onChange={(e) => setSelectedTeamId(e.target.value)}
               className="w-full text-sm border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
             >
-              <option value="">Select a team…</option>
-              {teams.map((t) => (
-                <option key={t.team_id} value={t.team_id}>
-                  {t.team_name} — {t.region}
-                  {t.member_count != null ? ` (${t.member_count} members)` : ''}
+              <option value="">{t('admin.selectTeamPlaceholder')}</option>
+              {teams.map((team) => (
+                <option key={team.team_id} value={team.team_id}>
+                  {team.team_name} — {team.region}
+                  {team.member_count != null ? ` (${t('admin.members', { n: team.member_count })})` : ''}
                 </option>
               ))}
             </select>
@@ -227,14 +230,14 @@ function ActionPanel({ report, teams, onAction }) {
             disabled={!selectedTeamId || busy}
             className="bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white text-sm font-semibold rounded-xl px-5 py-2.5 transition-colors whitespace-nowrap"
           >
-            {busy ? 'Assigning…' : 'Assign team →'}
+            {busy ? t('admin.assigning') : t('admin.assignTeam')}
           </button>
         </div>
       )}
 
       {status === 'in_progress' && (
         <p className="text-sm text-gray-500 bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3">
-          Awaiting after-photo from the assigned crew to mark as resolved.
+          {t('admin.waitingAfterPhoto')}
         </p>
       )}
     </Section>
@@ -244,6 +247,8 @@ function ActionPanel({ report, teams, onAction }) {
 // ── main component ────────────────────────────────────────────────────────────
 
 export default function ReportDetailModal({ reportId, onClose, onUpdated, initialEditMode = false }) {
+  const { t, lang } = useI18n()
+  const locale = lang === 'ms' ? 'ms-MY' : 'en-MY'
   const [report, setReport] = useState(null)
   const [teams, setTeams] = useState([])
   const [hazardTypes, setHazardTypes] = useState([])
@@ -279,11 +284,11 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
       setTeams(tRes.data.data ?? [])
       setHazardTypes(htRes.data.data ?? [])
     } catch {
-      setError('Could not load report. Check that the backend is running.')
+      setError(t('admin.loadReportFailed'))
     } finally {
       setLoading(false)
     }
-  }, [reportId])
+  }, [reportId, t])
 
   useEffect(() => { load() }, [load])
 
@@ -323,12 +328,12 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
         is_public: draftDetails.is_public,
       }
       await api.put(`/admin/reports/${reportId}`, payload)
-      showToast('Details updated ✓')
+      showToast(t('admin.toastDetails'))
       setEditDetails(false)
       await load()
       onUpdated()
     } catch (e) {
-      showToast(e?.response?.data?.message ?? 'Save failed', 'error')
+      showToast(e?.response?.data?.message ?? t('admin.saveFailed'), 'error')
     } finally {
       setSaving(false)
     }
@@ -355,12 +360,12 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
         state: draftLoc.state,
       }
       await api.put(`/admin/reports/${reportId}`, payload)
-      showToast('Location updated ✓')
+      showToast(t('admin.toastLocation'))
       setEditLoc(false)
       await load()
       onUpdated()
     } catch (e) {
-      showToast(e?.response?.data?.message ?? 'Save failed', 'error')
+      showToast(e?.response?.data?.message ?? t('admin.saveFailed'), 'error')
     } finally {
       setSaving(false)
     }
@@ -373,7 +378,7 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
       onUpdated()
       onClose()
     } catch (e) {
-      showToast(e?.response?.data?.message ?? 'Delete failed', 'error')
+      showToast(e?.response?.data?.message ?? t('admin.deleteFailedShort'), 'error')
       setDeleteConfirm(false)
     } finally {
       setDeleting(false)
@@ -384,11 +389,11 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
     setArchiving(true)
     try {
       await api.post(`/admin/reports/${reportId}/archive`)
-      showToast('Report archived ✓')
+      showToast(t('admin.toastArchived'))
       await load()
       onUpdated()
     } catch (e) {
-      showToast(e?.response?.data?.message ?? 'Archive failed', 'error')
+      showToast(e?.response?.data?.message ?? t('admin.archiveFailedShort'), 'error')
     } finally {
       setArchiving(false)
     }
@@ -398,11 +403,11 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
     setArchiving(true)
     try {
       await api.post(`/admin/reports/${reportId}/unarchive`)
-      showToast('Report restored to queue ✓')
+      showToast(t('admin.toastRestored'))
       await load()
       onUpdated()
     } catch (e) {
-      showToast(e?.response?.data?.message ?? 'Unarchive failed', 'error')
+      showToast(e?.response?.data?.message ?? t('admin.unarchiveFailedShort'), 'error')
     } finally {
       setArchiving(false)
     }
@@ -412,21 +417,21 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
     try {
       if (type === 'validate') {
         await api.put(`/reports/${reportId}/status`, { status: payload })
-        showToast(payload === 'verified' ? 'Report verified ✓' : 'Report rejected')
+        showToast(payload === 'verified' ? t('admin.toastVerified') : t('admin.toastRejected'))
       } else if (type === 'assign') {
         await api.put(`/admin/reports/${reportId}/assign`, { team_id: payload })
-        showToast('Team assigned — status → In Progress ✓')
+        showToast(t('admin.toastAssigned'))
       }
       await load()
       onUpdated()
     } catch (e) {
-      const msg = e?.response?.data?.message ?? 'Action failed'
+      const msg = e?.response?.data?.message ?? t('admin.actionFailed')
       showToast(msg, 'error')
     }
   }
 
   const statusName = report?.status?.status_name ?? 'submitted'
-  const statusMeta = STATUS_META[statusName] ?? STATUS_META.submitted
+  const statusColour = STATUS_COLOUR[statusName] ?? STATUS_COLOUR.submitted
   const loc = report?.location
 
   return (
@@ -444,12 +449,12 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
             {report ? (
               <div className="min-w-0 flex-1 pr-4">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <h2 className="text-lg font-bold text-gray-900 truncate">{report.title ?? 'Untitled'}</h2>
-                  <span className={`shrink-0 text-xs font-semibold px-2.5 py-0.5 rounded-full ${statusMeta.colour}`}>
-                    {statusMeta.label}
+                  <h2 className="text-lg font-bold text-gray-900 truncate">{report.title ?? t('admin.untitled')}</h2>
+                  <span className={`shrink-0 text-xs font-semibold px-2.5 py-0.5 rounded-full ${statusColour}`}>
+                    {t(`status.${statusName}`)}
                   </span>
                 </div>
-                <p className="text-xs text-gray-400 mt-0.5 font-mono">Report #{reportId}</p>
+                <p className="text-xs text-gray-400 mt-0.5 font-mono">{t('admin.reportNo', { id: reportId })}</p>
               </div>
             ) : (
               <div className="h-10 w-60 bg-gray-100 animate-pulse rounded-lg" />
@@ -457,8 +462,8 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
             <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={() => setDeleteConfirm((v) => !v)}
-                aria-label="Delete report"
-                title="Delete report"
+                aria-label={t('admin.deleteReportTitle')}
+                title={t('admin.deleteReportTitle')}
                 className="text-gray-400 hover:text-red-500 transition-colors rounded-lg p-1 hover:bg-red-50"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -468,7 +473,7 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
               </button>
               <button
                 onClick={onClose}
-                aria-label="Close"
+                aria-label={t('common.close')}
                 className="text-gray-400 hover:text-gray-700 transition-colors rounded-lg p-1 hover:bg-gray-100"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -494,10 +499,10 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
               {deleteConfirm && (
                 <div className="mx-6 mt-5 bg-red-50 border border-red-300 rounded-xl px-4 py-4 flex flex-col gap-3">
                   <p className="text-sm font-semibold text-red-800">
-                    Permanently delete Report #{reportId}?
+                    {t('admin.deleteQuestion', { id: reportId })}
                   </p>
                   <p className="text-xs text-red-700">
-                    This removes the report and all its images from the database. Rejected reports are kept in the database — this is a hard delete and cannot be undone.
+                    {t('admin.deleteExplain')}
                   </p>
                   <div className="flex gap-2">
                     <button
@@ -505,14 +510,14 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
                       disabled={deleting}
                       className="bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-sm font-semibold rounded-lg px-4 py-2 transition-colors"
                     >
-                      {deleting ? 'Deleting…' : 'Yes, permanently delete'}
+                      {deleting ? t('admin.deleting') : t('admin.deleteYes')}
                     </button>
                     <button
                       onClick={() => setDeleteConfirm(false)}
                       disabled={deleting}
                       className="border border-red-300 text-red-700 hover:bg-red-100 text-sm font-medium rounded-lg px-4 py-2 transition-colors"
                     >
-                      Cancel
+                      {t('common.cancel')}
                     </button>
                   </div>
                 </div>
@@ -523,14 +528,14 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
                 <div className="mx-6 mt-5 bg-yellow-50 border border-yellow-300 rounded-xl px-4 py-3 flex gap-3 items-start">
                   <span className="text-yellow-500 shrink-0 mt-0.5">⚠</span>
                   <p className="text-sm text-yellow-800">
-                    AI couldn't confidently classify this hazard.{' '}
+                    {t('admin.lowConfClassify')}{' '}
                     <button
                       onClick={startEditDetails}
                       className="font-semibold underline hover:text-yellow-900"
                     >
-                      Set the type and severity manually
+                      {t('admin.lowConfSetManually')}
                     </button>{' '}
-                    before validating.
+                    {t('admin.lowConfBefore')}
                   </p>
                 </div>
               )}
@@ -541,13 +546,13 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
               {/* Location */}
               {loc && (
                 <Section
-                  title="Location"
+                  title={t('admin.locationTitle')}
                   action={!editLoc && (
                     <button
                       onClick={startEditLoc}
                       className="text-xs text-gray-400 hover:text-orange-500 transition-colors"
                     >
-                      Edit location
+                      {t('admin.editLocation')}
                     </button>
                   )}
                 >
@@ -555,7 +560,7 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="text-xs font-medium text-gray-500 block mb-1">Latitude</label>
+                          <label className="text-xs font-medium text-gray-500 block mb-1">{t('submit.latitude')}</label>
                           <input
                             type="number"
                             step="any"
@@ -565,7 +570,7 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
                           />
                         </div>
                         <div>
-                          <label className="text-xs font-medium text-gray-500 block mb-1">Longitude</label>
+                          <label className="text-xs font-medium text-gray-500 block mb-1">{t('submit.longitude')}</label>
                           <input
                             type="number"
                             step="any"
@@ -576,7 +581,7 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
                         </div>
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-gray-500 block mb-1">Address</label>
+                        <label className="text-xs font-medium text-gray-500 block mb-1">{t('admin.addressLabel')}</label>
                         <input
                           type="text"
                           value={draftLoc.address_name}
@@ -585,7 +590,7 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-gray-500 block mb-1">State</label>
+                        <label className="text-xs font-medium text-gray-500 block mb-1">{t('admin.stateLabel')}</label>
                         <input
                           type="text"
                           value={draftLoc.state}
@@ -599,14 +604,14 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
                           disabled={saving}
                           className="bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white text-sm font-semibold rounded-lg px-4 py-2 transition-colors"
                         >
-                          {saving ? 'Saving…' : 'Save location'}
+                          {saving ? t('admin.saving') : t('admin.saveLocation')}
                         </button>
                         <button
                           onClick={() => setEditLoc(false)}
                           disabled={saving}
                           className="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm font-medium rounded-lg px-4 py-2 transition-colors"
                         >
-                          Cancel
+                          {t('common.cancel')}
                         </button>
                       </div>
                     </div>
@@ -627,18 +632,18 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
 
               {/* Hazard details */}
               <Section
-                title="Hazard Details"
+                title={t('admin.hazardDetails')}
                 action={!editDetails && (
                   <button
                     onClick={startEditDetails}
-                    title="Edit details"
+                    title={t('admin.edit')}
                     className="flex items-center gap-1 text-xs text-gray-400 hover:text-orange-500 transition-colors"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                         d="M15.232 5.232l3.536 3.536M9 13l-4 1 1-4 9.293-9.293a1 1 0 011.414 0l2.586 2.586a1 1 0 010 1.414L9 13z" />
                     </svg>
-                    Edit
+                    {t('admin.edit')}
                   </button>
                 )}
               >
@@ -646,36 +651,36 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="text-xs font-medium text-gray-500 block mb-1">Hazard Type</label>
+                        <label className="text-xs font-medium text-gray-500 block mb-1">{t('admin.hazardTypeLabel')}</label>
                         <select
                           value={draftDetails.hazard_type_id}
                           onChange={(e) => setDraftDetails((d) => ({ ...d, hazard_type_id: e.target.value }))}
                           className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
                         >
-                          <option value="">— Not set —</option>
+                          <option value="">{t('admin.notSet')}</option>
                           {hazardTypes.map((ht) => (
                             <option key={ht.hazard_type_id} value={ht.hazard_type_id}>
-                              {ht.type_name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                              {t(`hazardType.${ht.type_name}`)}
                             </option>
                           ))}
                         </select>
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-gray-500 block mb-1">Severity (1–5)</label>
+                        <label className="text-xs font-medium text-gray-500 block mb-1">{t('admin.severityRange')}</label>
                         <select
                           value={draftDetails.severity_score}
                           onChange={(e) => setDraftDetails((d) => ({ ...d, severity_score: e.target.value }))}
                           className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
                         >
-                          <option value="">— Not set —</option>
+                          <option value="">{t('admin.notSet')}</option>
                           {[1, 2, 3, 4, 5].map((n) => (
-                            <option key={n} value={n}>{n} — {SEVERITY_LABELS[n]}</option>
+                            <option key={n} value={n}>{n} — {t(`severity.${n}`)}</option>
                           ))}
                         </select>
                       </div>
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-500 block mb-1">Title</label>
+                      <label className="text-xs font-medium text-gray-500 block mb-1">{t('admin.titleLabel')}</label>
                       <input
                         type="text"
                         maxLength={100}
@@ -685,7 +690,7 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-500 block mb-1">Description</label>
+                      <label className="text-xs font-medium text-gray-500 block mb-1">{t('admin.descriptionLabel')}</label>
                       <textarea
                         rows={3}
                         value={draftDetails.description}
@@ -701,7 +706,7 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
                         onChange={(e) => setDraftDetails((d) => ({ ...d, is_public: e.target.checked }))}
                         className="accent-orange-500"
                       />
-                      <label htmlFor="is_public_edit" className="text-sm text-gray-600">Public (visible on map once verified)</label>
+                      <label htmlFor="is_public_edit" className="text-sm text-gray-600">{t('admin.publicLabel')}</label>
                     </div>
                     <div className="flex gap-2 pt-1">
                       <button
@@ -709,50 +714,50 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
                         disabled={saving}
                         className="bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white text-sm font-semibold rounded-lg px-4 py-2 transition-colors"
                       >
-                        {saving ? 'Saving…' : 'Save changes'}
+                        {saving ? t('admin.saving') : t('admin.saveChanges')}
                       </button>
                       <button
                         onClick={() => setEditDetails(false)}
                         disabled={saving}
                         className="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm font-medium rounded-lg px-4 py-2 transition-colors"
                       >
-                        Cancel
+                        {t('common.cancel')}
                       </button>
                     </div>
                   </div>
                 ) : (
                   <>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-4">
-                      <InfoRow label="Type">
-                        <span className="capitalize">
-                          {report.hazard_type?.type_name?.replace(/_/g, ' ') ?? '—'}
+                      <InfoRow label={t('admin.typeLabel')}>
+                        <span>
+                          {report.hazard_type?.type_name ? t(`hazardType.${report.hazard_type.type_name}`) : '—'}
                         </span>
                       </InfoRow>
-                      <InfoRow label="Severity">
+                      <InfoRow label={t('myReports.severity').replace(':', '')}>
                         <SeverityDots score={report.severity_score} />
                       </InfoRow>
-                      <InfoRow label="AI Confidence">
+                      <InfoRow label={t('admin.aiConfidence')}>
                         {report.detection_confidence != null ? (
                           <span className={report.detection_low_confidence ? 'text-amber-600 font-semibold' : ''}>
                             {(report.detection_confidence * 100).toFixed(1)}%
                             {report.detection_low_confidence && (
                               <span className="block text-xs font-normal text-amber-600 mt-0.5">
-                                ⚠ Below 70% threshold — manual review required
+                                {t('admin.belowThreshold')}
                               </span>
                             )}
                           </span>
                         ) : '—'}
                       </InfoRow>
-                      <InfoRow label="Submitter">
-                        {report.user_id ? `User #${report.user_id}` : 'Guest'}
+                      <InfoRow label={t('admin.submitter')}>
+                        {report.user_id ? t('admin.userNo', { id: report.user_id }) : t('admin.guest')}
                       </InfoRow>
-                      <InfoRow label="Visibility">
-                        {report.is_public ? 'Public' : 'Private'}
+                      <InfoRow label={t('admin.visibility')}>
+                        {report.is_public ? t('admin.publicVal') : t('admin.privateVal')}
                       </InfoRow>
                     </div>
                     {report.description && (
                       <div className="mt-4 bg-gray-50 rounded-xl px-4 py-3">
-                        <p className="text-xs font-medium text-gray-400 mb-1">Description</p>
+                        <p className="text-xs font-medium text-gray-400 mb-1">{t('admin.descriptionLabel')}</p>
                         <p className="text-sm text-gray-700 leading-relaxed">{report.description}</p>
                       </div>
                     )}
@@ -761,13 +766,13 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
               </Section>
 
               {/* Timeline */}
-              <Section title="Timeline">
-                <Timeline report={report} />
+              <Section title={t('admin.timeline')}>
+                <Timeline report={report} locale={locale} />
               </Section>
 
               {/* Assigned team (when set) */}
               {report.assigned_team && (
-                <Section title="Assigned Team">
+                <Section title={t('admin.assignedTeam')}>
                   <div className="flex items-start gap-4 bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3">
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-gray-800">{report.assigned_team.team_name}</p>
@@ -777,7 +782,7 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
                     </div>
                     {report.assigned_at && (
                       <p className="text-xs text-gray-400 whitespace-nowrap mt-0.5 shrink-0">
-                        Assigned {fmtDate(report.assigned_at)}
+                        {t('admin.assignedOn', { date: fmtDate(report.assigned_at, locale) })}
                       </p>
                     )}
                   </div>
@@ -786,13 +791,13 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
 
               {/* Archive section — for resolved/rejected reports */}
               {(statusName === 'resolved' || statusName === 'rejected') && (
-                <Section title="Archive">
+                <Section title={t('admin.archiveSection')}>
                   {report.archived_at ? (
                     <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 flex items-center justify-between gap-4">
                       <div>
-                        <p className="text-sm text-gray-700 font-medium">Archived</p>
+                        <p className="text-sm text-gray-700 font-medium">{t('admin.archivedWord')}</p>
                         <p className="text-xs text-gray-400 mt-0.5">
-                          {fmtDate(report.archived_at)}
+                          {fmtDate(report.archived_at, locale)}
                         </p>
                       </div>
                       <button
@@ -800,22 +805,22 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
                         disabled={archiving}
                         className="text-sm text-orange-600 hover:text-orange-700 font-medium hover:underline disabled:opacity-50 shrink-0"
                       >
-                        {archiving ? 'Restoring…' : 'Unarchive →'}
+                        {archiving ? t('admin.restoring') : t('admin.unarchiveArrow')}
                       </button>
                     </div>
                   ) : (
                     <div className="flex items-center justify-between gap-4 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
                       <div className="text-sm text-blue-800">
                         {statusName === 'resolved'
-                          ? `Resolved ${report.resolution_date ? `on ${fmtDate(report.resolution_date)}` : ''}. Archive to move it out of the active queue.`
-                          : 'Rejected. Archive to file it away and remove it from the active queue.'}
+                          ? t('admin.archiveResolvedPrompt', { date: report.resolution_date ? ` ${fmtDate(report.resolution_date, locale)}` : '' })
+                          : t('admin.archiveRejectedPrompt')}
                       </div>
                       <button
                         onClick={handleArchive}
                         disabled={archiving}
                         className="shrink-0 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white text-sm font-semibold rounded-xl px-4 py-2 transition-colors"
                       >
-                        {archiving ? 'Archiving…' : 'Archive'}
+                        {archiving ? t('admin.archiving') : t('admin.archiveBtn')}
                       </button>
                     </div>
                   )}

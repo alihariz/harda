@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useI18n } from '../i18n/I18nContext'
+import LanguageToggle from './LanguageToggle'
 
 export default function Navbar() {
   const { user, logout, isAdmin } = useAuth()
+  const { t } = useI18n()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -24,25 +27,26 @@ export default function Navbar() {
           {/* Brand */}
           <Link to="/" className="flex items-center gap-2">
             <span className="text-orange-400 font-bold text-xl tracking-wide">HARDA</span>
-            <span className="hidden sm:block text-gray-400 text-xs mt-0.5">Road Hazard Detection</span>
+            <span className="hidden sm:block text-gray-400 text-xs mt-0.5">{t('common.brandTagline')}</span>
           </Link>
 
           {/* Desktop links */}
           <div className="hidden md:flex items-center gap-6">
-            <NavLink to="/" end className={linkClass}>Map</NavLink>
-            {!isAdmin && <NavLink to="/submit" className={linkClass}>Submit Report</NavLink>}
-            {!isAdmin && user && <NavLink to="/reports" className={linkClass}>My Reports</NavLink>}
+            <NavLink to="/" end className={linkClass}>{t('nav.map')}</NavLink>
+            {!isAdmin && <NavLink to="/submit" className={linkClass}>{t('nav.submit')}</NavLink>}
+            {!isAdmin && user && <NavLink to="/reports" className={linkClass}>{t('nav.myReports')}</NavLink>}
             {isAdmin && (
               <>
-                <NavLink to="/admin" end className={linkClass}>Dashboard</NavLink>
-                <NavLink to="/admin/reports" className={linkClass}>Report Queue</NavLink>
-                <NavLink to="/admin/archive" className={linkClass}>Archive</NavLink>
+                <NavLink to="/admin" end className={linkClass}>{t('nav.dashboard')}</NavLink>
+                <NavLink to="/admin/reports" className={linkClass}>{t('nav.reportQueue')}</NavLink>
+                <NavLink to="/admin/archive" className={linkClass}>{t('nav.archive')}</NavLink>
               </>
             )}
           </div>
 
           {/* Auth controls */}
           <div className="hidden md:flex items-center gap-3">
+            <LanguageToggle />
             {user ? (
               <>
                 <span className="text-gray-400 text-sm">{user.username ?? user.email}</span>
@@ -50,7 +54,7 @@ export default function Navbar() {
                   onClick={handleLogout}
                   className="text-sm bg-gray-700 hover:bg-gray-600 text-gray-200 px-3 py-1.5 rounded-md transition-colors"
                 >
-                  Logout
+                  {t('nav.logout')}
                 </button>
               </>
             ) : (
@@ -58,7 +62,7 @@ export default function Navbar() {
                 to="/login"
                 className="text-sm bg-orange-500 hover:bg-orange-400 text-white px-4 py-1.5 rounded-md font-medium transition-colors"
               >
-                Login
+                {t('nav.login')}
               </Link>
             )}
           </div>
@@ -67,7 +71,7 @@ export default function Navbar() {
           <button
             className="md:hidden text-gray-300 hover:text-white"
             onClick={() => setMenuOpen((o) => !o)}
-            aria-label="Toggle menu"
+            aria-label={t('nav.toggleMenu')}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {menuOpen
@@ -81,24 +85,27 @@ export default function Navbar() {
       {/* Mobile menu */}
       {menuOpen && (
         <div className="md:hidden bg-gray-800 border-t border-gray-700 px-4 py-3 flex flex-col gap-3">
-          <NavLink to="/" end className={linkClass} onClick={() => setMenuOpen(false)}>Map</NavLink>
-          {!isAdmin && <NavLink to="/submit" className={linkClass} onClick={() => setMenuOpen(false)}>Submit Report</NavLink>}
-          {!isAdmin && user && <NavLink to="/reports" className={linkClass} onClick={() => setMenuOpen(false)}>My Reports</NavLink>}
+          <NavLink to="/" end className={linkClass} onClick={() => setMenuOpen(false)}>{t('nav.map')}</NavLink>
+          {!isAdmin && <NavLink to="/submit" className={linkClass} onClick={() => setMenuOpen(false)}>{t('nav.submit')}</NavLink>}
+          {!isAdmin && user && <NavLink to="/reports" className={linkClass} onClick={() => setMenuOpen(false)}>{t('nav.myReports')}</NavLink>}
           {isAdmin && (
             <>
-              <NavLink to="/admin" end className={linkClass} onClick={() => setMenuOpen(false)}>Dashboard</NavLink>
-              <NavLink to="/admin/reports" className={linkClass} onClick={() => setMenuOpen(false)}>Report Queue</NavLink>
-              <NavLink to="/admin/archive" className={linkClass} onClick={() => setMenuOpen(false)}>Archive</NavLink>
+              <NavLink to="/admin" end className={linkClass} onClick={() => setMenuOpen(false)}>{t('nav.dashboard')}</NavLink>
+              <NavLink to="/admin/reports" className={linkClass} onClick={() => setMenuOpen(false)}>{t('nav.reportQueue')}</NavLink>
+              <NavLink to="/admin/archive" className={linkClass} onClick={() => setMenuOpen(false)}>{t('nav.archive')}</NavLink>
             </>
           )}
           <hr className="border-gray-700" />
-          {user ? (
-            <button onClick={handleLogout} className="text-left text-sm text-red-400 hover:text-red-300">
-              Logout ({user.username ?? user.email})
-            </button>
-          ) : (
-            <NavLink to="/login" className={linkClass} onClick={() => setMenuOpen(false)}>Login</NavLink>
-          )}
+          <div className="flex items-center justify-between">
+            <LanguageToggle />
+            {user ? (
+              <button onClick={handleLogout} className="text-left text-sm text-red-400 hover:text-red-300">
+                {t('nav.logout')} ({user.username ?? user.email})
+              </button>
+            ) : (
+              <NavLink to="/login" className={linkClass} onClick={() => setMenuOpen(false)}>{t('nav.login')}</NavLink>
+            )}
+          </div>
         </div>
       )}
     </nav>

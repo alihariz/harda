@@ -30,6 +30,8 @@ export function AuthProvider({ children }) {
   )
 }
 
+// The auth hook is intentionally colocated with its provider for readability.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   return useContext(AuthContext)
 }

@@ -10,10 +10,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { StatusBadge } from '@/components/StatusBadge';
 import { api } from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
 import { colors, hazardColor, radius, spacing, typography } from '@/lib/theme';
 import type { HazardReport } from '@/lib/types';
 
 export default function CrewInbox() {
+  const { t } = useI18n();
   const [items, setItems] = useState<HazardReport[]>([]);
   const [loading, setLoading] = useState(false);
   const [includeResolved, setIncludeResolved] = useState(false);
@@ -33,16 +35,16 @@ export default function CrewInbox() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Text style={[typography.h2, { color: '#fff' }]}>Assignments</Text>
+        <Text style={[typography.h2, { color: '#fff' }]}>{t('crew.inboxTitle')}</Text>
         <Text style={[typography.caption, { color: '#cbd5e1' }]}>
-          {loading ? 'Loading…' : `${items.length} ${includeResolved ? 'total' : 'open'}`}
+          {loading ? t('common.loading') : t(includeResolved ? 'crew.countTotal' : 'crew.countOpen', { n: items.length })}
         </Text>
         <Pressable
           style={styles.toggle}
           onPress={() => setIncludeResolved((v) => !v)}
         >
           <Text style={styles.toggleText}>
-            {includeResolved ? 'Hide resolved' : 'Show resolved'}
+            {includeResolved ? t('crew.hideResolved') : t('crew.showResolved')}
           </Text>
         </Pressable>
       </View>
@@ -54,7 +56,7 @@ export default function CrewInbox() {
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
         ListEmptyComponent={
           <Text style={[typography.body, { color: colors.muted, textAlign: 'center', marginTop: spacing.xxl }]}>
-            No assignments right now. New ones appear here automatically.
+            {t('crew.empty')}
           </Text>
         }
         renderItem={({ item }) => (
@@ -69,8 +71,8 @@ export default function CrewInbox() {
                 {item.location?.address_name ?? `${item.location?.latitude}, ${item.location?.longitude}`}
               </Text>
               <Text style={typography.caption}>
-                {item.hazard_type?.type_name ?? '—'}
-                {item.severity_score ? ` • severity ${item.severity_score}` : ''}
+                {item.hazard_type?.type_name ? t(`hazardType.${item.hazard_type.type_name}`) : '—'}
+                {item.severity_score ? ` • ${t('myReports.severity', { n: item.severity_score })}` : ''}
               </Text>
               <View style={{ marginTop: spacing.xs }}>
                 <StatusBadge status={item.status?.status_name} />

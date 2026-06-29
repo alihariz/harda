@@ -1,8 +1,23 @@
 # HARDA Progress 2 — Handoff
 
-**Last updated:** 2026-05-29 by Claude Code session (UC011 admin-edit + hazard-types endpoint)
-**Owner of next session:** Ali Hariz — Task #18 demo is unblocked, run the lifecycle end-to-end
-**Read alongside:** `CLAUDE.md` (project conventions + schema + endpoints)
+**Last updated:** 2026-06-27 by Cowork session (NFR8 rate limiting, NFR14 BM/EN localisation, lint fixes, thesis accuracy report)
+**Owner of next session:** Ali Hariz — run `npm run lint` / `npm run build` (web) and `tsc --noEmit` (mobile) on Windows to confirm the i18n changes; then the Task #18 lifecycle demo
+**Read alongside:** `CLAUDE.md` (project conventions + schema + endpoints), `docs/Thesis_Accuracy_Report.md`
+
+---
+
+## 2026-06-27 sprint — "finish the system" pass
+
+All code authored via Cowork file tools. **The Linux sandbox could not run Vite / Metro / ESLint (they need native binaries that exist on Windows but not in the sandbox), so run the web build, web lint, and mobile typecheck on your machine to confirm.** The backend (pure Python) was fully verified: **pytest 28 passed**.
+
+- **NFR8 — API rate limiting.** `Flask-Limiter` in `backend/app/__init__.py` (`limiter`); config in `app/config.py` (`RATELIMIT_ENABLED/STORAGE_URI/DEFAULT/AUTH/DETECTION`); decorators on `auth.py` (register/login/admin-login → `RATELIMIT_AUTH`, 10/min) and `detection.py` (`/analyse` → `RATELIMIT_DETECTION`, 30/min). Off in `TestingConfig`. New `tests/test_ratelimit.py`. `Flask-Limiter==3.8.0` added to `requirements.txt`; env vars added to `backend/.env.example`.
+- **CORS hardening.** `CORS(app)` → env-driven `CORS_ORIGINS` (defaults to `*`). Set it to the homelab domain when ready.
+- **Lint fixes (web).** Two pre-existing ESLint errors resolved with targeted disables: `react-refresh/only-export-components` on `useAuth` (`context/AuthContext.jsx`) and `react-hooks/set-state-in-effect` on the mount fetch (`pages/AdminDashboard.jsx`).
+- **NFR14 — BM/EN localisation (web).** New `frontend/src/i18n/{strings.js,I18nContext.jsx}` + `components/LanguageToggle.jsx`; provider wired in `main.jsx`; toggle in the navbar. All 9 pages translated. Persisted in `localStorage` (`harda_lang`).
+- **NFR14 — BM/EN localisation (mobile).** New `mobile/lib/i18n.tsx` + `components/LanguageToggle.tsx`; provider wired in `app/_layout.tsx`; toggle in both profile screens. All auth/user/crew screens + tab labels + `StatusBadge` translated. Persisted via `expo-secure-store`.
+- **Thesis accuracy report.** `docs/Thesis_Accuracy_Report.md` cross-references `docs/HARDA - Tesis.pdf` (PSM I design doc) vs. the Progress 2 build. Headline thesis edits: mobile platform (Android/Kotlin → React Native/Expo), 8→9 tables (add `Team`), `role` on `users` not `admins`, add the Field-Crew actor/use cases. NFR8 + NFR14 are now **met**.
+
+No backend schema/endpoint changes this session except the rate-limit wiring; the ERD/use-case items are documentation only.
 
 ---
 

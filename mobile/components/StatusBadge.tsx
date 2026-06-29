@@ -1,14 +1,16 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useI18n } from '@/lib/i18n';
 import { radius, spacing, statusColor } from '@/lib/theme';
 
 export const StatusBadge: React.FC<{ status?: string | null }> = ({ status }) => {
+  const { t } = useI18n();
   if (!status) return null;
   const color = statusColor(status);
   return (
     <View style={[styles.pill, { backgroundColor: `${color}20`, borderColor: color }]}>
-      <Text style={[styles.text, { color }]}>{status.replace('_', ' ')}</Text>
+      <Text style={[styles.text, { color }]}>{t(`status.${status}`)}</Text>
     </View>
   );
 };

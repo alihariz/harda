@@ -5,6 +5,7 @@
 import { Tabs } from 'expo-router';
 import { Text } from 'react-native';
 
+import { useI18n } from '@/lib/i18n';
 import { colors } from '@/lib/theme';
 
 const Icon = ({ name, focused }: { name: string; focused: boolean }) => (
@@ -12,6 +13,7 @@ const Icon = ({ name, focused }: { name: string; focused: boolean }) => (
 );
 
 export default function UserLayout() {
+  const { t } = useI18n();
   return (
     <Tabs
       screenOptions={{
@@ -22,19 +24,19 @@ export default function UserLayout() {
     >
       <Tabs.Screen
         name="index"
-        options={{ title: 'Map', tabBarIcon: ({ focused }) => <Icon name="🗺️" focused={focused} /> }}
+        options={{ title: t('tabs.map'), tabBarIcon: ({ focused }) => <Icon name="🗺️" focused={focused} /> }}
       />
       <Tabs.Screen
         name="capture"
-        options={{ title: 'Submit', tabBarIcon: ({ focused }) => <Icon name="📷" focused={focused} /> }}
+        options={{ title: t('tabs.submit'), tabBarIcon: ({ focused }) => <Icon name="📷" focused={focused} /> }}
       />
       <Tabs.Screen
         name="my-reports"
-        options={{ title: 'My Reports', tabBarIcon: ({ focused }) => <Icon name="📋" focused={focused} /> }}
+        options={{ title: t('tabs.myReports'), tabBarIcon: ({ focused }) => <Icon name="📋" focused={focused} /> }}
       />
       <Tabs.Screen
         name="profile"
-        options={{ title: 'Profile', tabBarIcon: ({ focused }) => <Icon name="👤" focused={focused} /> }}
+        options={{ title: t('tabs.profile'), tabBarIcon: ({ focused }) => <Icon name="👤" focused={focused} /> }}
       />
       <Tabs.Screen name="preview" options={{ href: null }} />
     </Tabs>

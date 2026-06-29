@@ -2,11 +2,13 @@
 import { useState, useEffect } from 'react'
 import api from '../api/axios'
 import { useAuth } from '../context/AuthContext'
+import { useI18n } from '../i18n/I18nContext'
 
 const MAX_BYTES = 10 * 1024 * 1024
 
 export default function SubmitReport() {
   const { user } = useAuth()
+  const { t } = useI18n()
   const [file, setFile] = useState(null)
   const [preview, setPreview] = useState(null)
   const [description, setDescription] = useState('')
@@ -37,7 +39,7 @@ export default function SubmitReport() {
     const selected = e.target.files[0]
     if (!selected) return
     if (selected.size > MAX_BYTES) {
-      setError('File is too large. Maximum size is 10 MB.')
+      setError(t('submit.errTooLarge'))
       return
     }
     setFile(selected)
@@ -50,8 +52,8 @@ export default function SubmitReport() {
     e.preventDefault()
     const dropped = e.dataTransfer.files[0]
     if (!dropped) return
-    if (dropped.size > MAX_BYTES) { setError('File is too large. Max 10 MB.'); return }
-    if (!dropped.type.match(/image\/(jpeg|png)/)) { setError('Only JPEG and PNG files are allowed.'); return }
+    if (dropped.size > MAX_BYTES) { setError(t('submit.errTooLargeShort')); return }
+    if (!dropped.type.match(/image\/(jpeg|png)/)) { setError(t('submit.errImageType')); return }
     setFile(dropped)
     setPreview(URL.createObjectURL(dropped))
     setResult(null)
@@ -75,7 +77,7 @@ export default function SubmitReport() {
   async function handleSubmit(e) {
     e.preventDefault()
     if (!file) return
-    if (!lat || !lng) { setError('Location is required. Enable GPS or enter coordinates manually.'); return }
+    if (!lat || !lng) { setError(t('submit.errLocationRequired')); return }
 
     setSubmitting(true)
     setError(null)
@@ -93,7 +95,7 @@ export default function SubmitReport() {
       })
       setResult(data)
     } catch (err) {
-      setError(err.response?.data?.message ?? 'Submission failed. Please try again.')
+      setError(err.response?.data?.message ?? t('submit.errSubmit'))
     } finally {
       setSubmitting(false)
     }
@@ -105,15 +107,16 @@ export default function SubmitReport() {
   }
 
   const detection = result?.data?.detection
-  const hazardTypeName = result?.data?.hazard_type?.type_name ?? detection?.hazard_type ?? '—'
+  const hazardTypeKey = result?.data?.hazard_type?.type_name ?? detection?.hazard_type ?? null
+  const hazardTypeName = hazardTypeKey ? t(`hazardType.${hazardTypeKey}`) : '—'
   const confidence = detection?.confidence ?? 0
 
   return (
     <div className="max-w-xl mx-auto px-4 py-10">
-      <h1 className="text-2xl font-bold text-gray-800 mb-1">Submit a Hazard Report</h1>
+      <h1 className="text-2xl font-bold text-gray-800 mb-1">{t('submit.title')}</h1>
       <p className="text-gray-500 text-sm mb-8">
-        Upload a photo of the road hazard.
-        {user ? ` Submitting as ${user.username}.` : ' Guest submission — no login required.'}
+        {t('submit.lead')}
+        {user ? t('submit.submittingAs', { name: user.username }) : t('submit.guest')}
       </p>
 
       {result ? (
@@ -124,14 +127,14 @@ export default function SubmitReport() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 className="text-lg font-semibold text-green-800 mb-1">Report Submitted!</h2>
+          <h2 className="text-lg font-semibold text-green-800 mb-1">{t('submit.successTitle')}</h2>
           <p className="text-green-700 text-sm">
-            Tracking ID: <span className="font-mono font-bold">#{result.data?.report_id ?? '—'}</span>
+            {t('submit.trackingId')}: <span className="font-mono font-bold">#{result.data?.report_id ?? '—'}</span>
           </p>
           {detection && !detection.low_confidence ? (
             <div className="mt-3 bg-white border border-green-200 rounded-lg px-4 py-3 text-left inline-block w-full max-w-xs mx-auto">
-              <p className="text-xs text-gray-500 mb-1">AI detected</p>
-              <p className="text-gray-800 font-semibold capitalize">{hazardTypeName.replace(/_/g, ' ')}</p>
+              <p className="text-xs text-gray-500 mb-1">{t('submit.aiDetected')}</p>
+              <p className="text-gray-800 font-semibold">{hazardTypeName}</p>
               <div className="flex items-center gap-2 mt-1.5">
                 <div className="flex-1 bg-gray-200 rounded-full h-1.5">
                   <div
@@ -140,24 +143,24 @@ export default function SubmitReport() {
                   />
                 </div>
                 <span className="text-xs text-gray-500 whitespace-nowrap">
-                  {Math.round(confidence * 100)}% confidence
+                  {t('submit.confidence', { pct: Math.round(confidence * 100) })}
                 </span>
               </div>
-              <p className="text-xs text-gray-500 mt-1.5">Severity: {result.data?.severity_score ?? '—'}/5</p>
+              <p className="text-xs text-gray-500 mt-1.5">{t('submit.severity', { score: result.data?.severity_score ?? '—' })}</p>
             </div>
           ) : (
             <p className="text-green-600 text-sm mt-2">
               {detection?.low_confidence
-                ? 'AI detection was uncertain — an admin will classify this manually.'
-                : 'No hazard auto-detected — report flagged for manual review.'}
+                ? t('submit.uncertain')
+                : t('submit.noDetection')}
             </p>
           )}
-          <p className="text-xs text-gray-500 mt-4">Your report will appear on the map once verified by an admin.</p>
+          <p className="text-xs text-gray-500 mt-4">{t('submit.appearOnMap')}</p>
           <button
             onClick={reset}
             className="mt-4 text-sm text-green-700 underline hover:text-green-900"
           >
-            Submit another report
+            {t('submit.submitAnother')}
           </button>
         </div>
       ) : (
@@ -165,7 +168,7 @@ export default function SubmitReport() {
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Image upload */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Hazard Photo <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('submit.photo')} <span className="text-red-500">*</span></label>
             <div
               className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-orange-400 transition-colors cursor-pointer"
               onClick={() => document.getElementById('file-input').click()}
@@ -176,15 +179,15 @@ export default function SubmitReport() {
                 <div className="relative">
                   <img src={preview} alt="Preview" className="max-h-56 mx-auto rounded-lg object-contain" />
                   <p className="text-xs text-gray-400 mt-2">{file?.name} · {(file?.size / 1024 / 1024).toFixed(1)} MB</p>
-                  <p className="text-xs text-orange-500 mt-0.5">Click to change</p>
+                  <p className="text-xs text-orange-500 mt-0.5">{t('submit.clickToChange')}</p>
                 </div>
               ) : (
                 <>
                   <svg className="w-10 h-10 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <p className="text-gray-500 text-sm">Click to upload or drag and drop</p>
-                  <p className="text-gray-400 text-xs mt-1">JPEG or PNG, max 10 MB</p>
+                  <p className="text-gray-500 text-sm">{t('submit.uploadCta')}</p>
+                  <p className="text-gray-400 text-xs mt-1">{t('submit.uploadHint')}</p>
                 </>
               )}
             </div>
@@ -199,12 +202,12 @@ export default function SubmitReport() {
 
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Title <span className="text-gray-400">(optional)</span></label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('submit.titleLabel')} <span className="text-gray-400">{t('common.optional')}</span></label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Large pothole near school"
+              placeholder={t('submit.titlePlaceholder')}
               maxLength={100}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400"
             />
@@ -214,7 +217,7 @@ export default function SubmitReport() {
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-sm font-medium text-gray-700">
-                Location <span className="text-red-500">*</span>
+                {t('submit.location')} <span className="text-red-500">*</span>
               </label>
               <button
                 type="button"
@@ -229,7 +232,7 @@ export default function SubmitReport() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                 )}
-                {locStatus === 'detecting' ? 'Detecting…' : locStatus === 'ok' ? '↺ Re-detect' : 'Use my location'}
+                {locStatus === 'detecting' ? t('submit.detecting') : locStatus === 'ok' ? t('submit.reDetect') : t('submit.useLocation')}
               </button>
             </div>
             {locStatus === 'ok' && (
@@ -237,15 +240,15 @@ export default function SubmitReport() {
                 <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                GPS location detected
+                {t('submit.gpsDetected')}
               </p>
             )}
             {locStatus === 'error' && (
-              <p className="text-xs text-yellow-600 mb-1.5">GPS unavailable — enter coordinates manually.</p>
+              <p className="text-xs text-yellow-600 mb-1.5">{t('submit.gpsUnavailable')}</p>
             )}
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-xs text-gray-500 mb-0.5">Latitude</label>
+                <label className="block text-xs text-gray-500 mb-0.5">{t('submit.latitude')}</label>
                 <input
                   type="number"
                   step="any"
@@ -256,7 +259,7 @@ export default function SubmitReport() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-0.5">Longitude</label>
+                <label className="block text-xs text-gray-500 mb-0.5">{t('submit.longitude')}</label>
                 <input
                   type="number"
                   step="any"
@@ -272,13 +275,13 @@ export default function SubmitReport() {
           {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description <span className="text-gray-400">(optional)</span>
+              {t('submit.description')} <span className="text-gray-400">{t('common.optional')}</span>
             </label>
             <textarea
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Briefly describe the hazard..."
+              placeholder={t('submit.descPlaceholder')}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none"
             />
           </div>
@@ -295,9 +298,9 @@ export default function SubmitReport() {
             {submitting ? (
               <span className="flex items-center justify-center gap-2">
                 <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Analysing & Submitting…
+                {t('submit.analysing')}
               </span>
-            ) : 'Submit Report'}
+            ) : t('submit.submit')}
           </button>
         </form>
       )}

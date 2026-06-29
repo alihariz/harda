@@ -13,10 +13,12 @@ import { Field } from '@/components/Field';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
 import { colors, spacing, typography } from '@/lib/theme';
 
 export default function RegisterScreen() {
   const { login } = useAuth();
+  const { t } = useI18n();
   const [firstName, setFirstName] = useState('');
   const [lastName,  setLastName]  = useState('');
   const [username,  setUsername]  = useState('');
@@ -26,7 +28,7 @@ export default function RegisterScreen() {
 
   const onSubmit = async () => {
     if (!username || !email || !password) {
-      Alert.alert('Missing details', 'Username, email and password are required.');
+      Alert.alert(t('register.missingTitle'), t('register.missingMsg'));
       return;
     }
     setLoading(true);
@@ -41,7 +43,7 @@ export default function RegisterScreen() {
       const user = await login(email.trim(), password);
       router.replace(user.role === 'crew' ? '/(crew)' : '/(user)');
     } catch (e) {
-      Alert.alert('Registration failed', e instanceof Error ? e.message : 'Unknown error');
+      Alert.alert(t('register.failedTitle'), e instanceof Error ? e.message : t('common.unknownError'));
     } finally {
       setLoading(false);
     }
@@ -55,22 +57,22 @@ export default function RegisterScreen() {
       >
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <Text style={[typography.h1, { color: '#fff', textAlign: 'center' }]}>
-            Create account
+            {t('register.title')}
           </Text>
 
           <View style={styles.card}>
-            <Field label="First name" value={firstName} onChangeText={setFirstName} />
-            <Field label="Last name"  value={lastName}  onChangeText={setLastName} />
-            <Field label="Username"   value={username}  onChangeText={setUsername} autoCapitalize="none" />
-            <Field label="Email"      value={email}     onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-            <Field label="Password"   value={password}  onChangeText={setPassword} secureTextEntry />
+            <Field label={t('register.firstName')} value={firstName} onChangeText={setFirstName} />
+            <Field label={t('register.lastName')}  value={lastName}  onChangeText={setLastName} />
+            <Field label={t('register.username')}   value={username}  onChangeText={setUsername} autoCapitalize="none" />
+            <Field label={t('register.email')}      value={email}     onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+            <Field label={t('register.password')}   value={password}  onChangeText={setPassword} secureTextEntry />
 
-            <PrimaryButton title="Create account" onPress={onSubmit} loading={loading} />
+            <PrimaryButton title={t('register.createBtn')} onPress={onSubmit} loading={loading} />
           </View>
 
           <View style={styles.footer}>
-            <Text style={typography.caption}>Already have an account? </Text>
-            <Link href="/(auth)/login" style={styles.link}>Sign in</Link>
+            <Text style={typography.caption}>{t('register.haveAccount')}</Text>
+            <Link href="/(auth)/login" style={styles.link}>{t('register.signIn')}</Link>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

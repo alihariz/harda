@@ -12,9 +12,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { api } from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
 import { colors, radius, spacing, typography } from '@/lib/theme';
 
 export default function ResolveScreen() {
+  const { t } = useI18n();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [uri, setUri] = useState<string | null>(null);
   const [mime, setMime] = useState<string>('image/jpeg');
@@ -24,7 +26,7 @@ export default function ResolveScreen() {
   const capture = async () => {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('Camera permission needed', 'Allow camera access to capture the after-photo.');
+      Alert.alert(t('crew.camPermTitle'), t('crew.camPermMsg'));
       return;
     }
     const r = await ImagePicker.launchCameraAsync({
@@ -41,7 +43,7 @@ export default function ResolveScreen() {
 
   const onSubmit = async () => {
     if (!uri) {
-      Alert.alert('No photo', 'Capture an after-photo first.');
+      Alert.alert(t('crew.noPhotoTitle'), t('crew.noPhotoMsg'));
       return;
     }
     setSubmitting(true);
@@ -53,11 +55,11 @@ export default function ResolveScreen() {
         type: mime,
       } as unknown as Blob);
       await api.uploadAfterPhoto(Number(id), form);
-      Alert.alert('Resolved ✓', 'After-photo uploaded; assignment marked resolved.', [
-        { text: 'OK', onPress: () => router.replace('/(crew)') },
+      Alert.alert(t('crew.uploadedTitle'), t('crew.uploadedMsg'), [
+        { text: t('common.ok'), onPress: () => router.replace('/(crew)') },
       ]);
     } catch (e) {
-      Alert.alert('Upload failed', e instanceof Error ? e.message : 'Unknown error');
+      Alert.alert(t('crew.uploadFailedTitle'), e instanceof Error ? e.message : t('common.unknownError'));
     } finally {
       setSubmitting(false);
     }
@@ -66,24 +68,23 @@ export default function ResolveScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={typography.h1}>Mark as resolved</Text>
+        <Text style={typography.h1}>{t('crew.resolveTitle')}</Text>
         <Text style={[typography.body, { color: colors.muted, marginTop: spacing.sm }]}>
-          Capture a photo of the repaired hazard. This is uploaded as the
-          'after' image and becomes part of the audit-ready archive.
+          {t('crew.resolveSub')}
         </Text>
 
         {uri ? (
           <Image source={{ uri }} style={styles.preview} resizeMode="cover" />
         ) : (
           <View style={[styles.preview, styles.previewEmpty]}>
-            <Text style={typography.caption}>Tap "Capture after-photo" below</Text>
+            <Text style={typography.caption}>{t('crew.resolveHint')}</Text>
           </View>
         )}
 
-        <PrimaryButton title={uri ? 'Retake' : 'Capture after-photo'} onPress={capture} variant="secondary" />
+        <PrimaryButton title={uri ? t('crew.retake') : t('crew.captureAfter')} onPress={capture} variant="secondary" />
         <View style={{ height: spacing.sm }} />
         <PrimaryButton
-          title="Upload + mark resolved"
+          title={t('crew.uploadBtn')}
           onPress={onSubmit}
           loading={submitting}
           disabled={!uri}

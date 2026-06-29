@@ -4,10 +4,21 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 db = SQLAlchemy()
 migrate = Migrate()
 jwt = JWTManager()
+# NFR8 — API rate limiting. Limits/storage are read from app config at init_app.
+limiter = Limiter(key_func=get_remote_address)
+
+
+def _cors_origins(value):
+    """Parse CORS_ORIGINS config into the form flask-cors expects."""
+    if not value or value.strip() == "*":
+        return "*"
+    return [o.strip() for o in value.split(",") if o.strip()]
 
 
 def create_app(config_name="development"):
@@ -20,7 +31,11 @@ def create_app(config_name="development"):
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
-    CORS(app)
+    CORS(app, resources={r"/api/*": {"origins": _cors_origins(app.config.get("CORS_ORIGINS", "*"))}},
+         supports_credentials=False)
+    # NFR8 — rate limiting (reads RATELIMIT_* keys from config; disabled in tests)
+    app.config.setdefault("RATELIMIT_DEFAULT", app.config.get("RATELIMIT_DEFAULT", "200 per minute"))
+    limiter.init_app(app)
 
     # Register blueprints
     from app.routes.auth import auth_bp

@@ -9,6 +9,7 @@ import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { api } from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
 import { colors, hazardColor, spacing, typography } from '@/lib/theme';
 
 interface MapPoint {
@@ -27,6 +28,7 @@ const MALAYSIA_CENTER = {
 };
 
 export default function UserHome() {
+  const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [points, setPoints] = useState<MapPoint[]>([]);
 
@@ -36,7 +38,7 @@ export default function UserHome() {
         const data = await api.mapReports();
         setPoints(data);
       } catch (e) {
-        Alert.alert('Could not load map', e instanceof Error ? e.message : 'Unknown error');
+        Alert.alert(t('home.loadErrTitle'), e instanceof Error ? e.message : t('common.unknownError'));
       } finally {
         setLoading(false);
       }
@@ -46,9 +48,9 @@ export default function UserHome() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Text style={[typography.h2, { color: '#fff' }]}>Nearby hazards</Text>
+        <Text style={[typography.h2, { color: '#fff' }]}>{t('home.title')}</Text>
         <Text style={[typography.caption, { color: '#cbd5e1' }]}>
-          {loading ? 'Loading…' : `${points.length} verified reports across Malaysia`}
+          {loading ? t('common.loading') : t('home.count', { n: points.length })}
         </Text>
       </View>
       <View style={{ flex: 1 }}>
@@ -62,8 +64,8 @@ export default function UserHome() {
               key={p.report_id}
               coordinate={{ latitude: p.latitude, longitude: p.longitude }}
               pinColor={hazardColor(p.hazard_type)}
-              title={p.hazard_type ?? 'Hazard'}
-              description={`Severity ${p.severity_score ?? '–'} • Report #${p.report_id}`}
+              title={p.hazard_type ? t(`hazardType.${p.hazard_type}`) : t('home.hazard')}
+              description={t('home.markerDesc', { sev: p.severity_score ?? '–', id: p.report_id })}
             />
           ))}
         </MapView>
