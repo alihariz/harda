@@ -32,6 +32,7 @@ export const STRINGS = {
     },
     login: {
       subtitle: 'Sign in to your account',
+      adminConsole: 'Admin Console',
       user: 'User',
       admin: 'Admin',
       email: 'Email',
@@ -311,6 +312,7 @@ export const STRINGS = {
     },
     login: {
       subtitle: 'Log masuk ke akaun anda',
+      adminConsole: 'Konsol Pentadbir',
       user: 'Pengguna',
       admin: 'Pentadbir',
       email: 'E-mel',

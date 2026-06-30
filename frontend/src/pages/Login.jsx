@@ -1,4 +1,6 @@
-// UC004 – Auth (user + admin login)
+// UC004 – Admin authentication.
+// The web app is the admin console; public users and field crew use the mobile app,
+// so this login is admin-only.
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -9,7 +11,6 @@ export default function Login() {
   const { login } = useAuth()
   const { t } = useI18n()
   const navigate = useNavigate()
-  const [mode, setMode] = useState('user') // 'user' | 'admin'
   const [form, setForm] = useState({ email: '', password: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -23,15 +24,10 @@ export default function Login() {
     setLoading(true)
     setError(null)
 
-    const endpoint = mode === 'admin' ? '/auth/admin/login' : '/auth/login'
-
     try {
-      const { data } = await api.post(endpoint, form)
-      login(
-        { ...data.data?.user, role: mode === 'admin' ? 'admin' : 'user' },
-        data.data?.access_token
-      )
-      navigate(mode === 'admin' ? '/admin' : '/')
+      const { data } = await api.post('/auth/admin/login', form)
+      login({ ...data.data?.admin, role: 'admin' }, data.data?.access_token)
+      navigate('/admin')
     } catch (err) {
       setError(err.response?.data?.message ?? t('login.failed'))
     } finally {
@@ -45,22 +41,7 @@ export default function Login() {
         {/* Logo */}
         <div className="text-center mb-8">
           <span className="text-3xl font-bold text-orange-500">HARDA</span>
-          <p className="text-gray-500 text-sm mt-1">{t('login.subtitle')}</p>
-        </div>
-
-        {/* Mode toggle */}
-        <div className="flex bg-gray-100 rounded-lg p-1 mb-6">
-          {['user', 'admin'].map((m) => (
-            <button
-              key={m}
-              onClick={() => { setMode(m); setError(null) }}
-              className={`flex-1 text-sm font-medium py-1.5 rounded-md transition-colors ${
-                mode === m ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {m === 'admin' ? t('login.admin') : t('login.user')}
-            </button>
-          ))}
+          <p className="text-gray-500 text-sm mt-1">{t('login.adminConsole')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -72,7 +53,7 @@ export default function Login() {
               value={form.email}
               onChange={handleChange}
               required
-              placeholder="you@example.com"
+              placeholder="admin@harda.my"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
             />
           </div>
@@ -104,17 +85,8 @@ export default function Login() {
 
         <div className="mt-6 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-xs text-gray-500 space-y-0.5">
           <p className="font-medium text-gray-600 mb-1">{t('login.demoCreds')}</p>
-          {mode === 'user' ? (
-            <>
-              <p>{t('login.emailLabel')}: <span className="font-mono text-gray-700">user@harda.my</span></p>
-              <p>{t('login.passwordLabel')}: <span className="font-mono text-gray-700">User123!</span></p>
-            </>
-          ) : (
-            <>
-              <p>{t('login.emailLabel')}: <span className="font-mono text-gray-700">admin@harda.my</span></p>
-              <p>{t('login.passwordLabel')}: <span className="font-mono text-gray-700">Admin123!</span></p>
-            </>
-          )}
+          <p>{t('login.emailLabel')}: <span className="font-mono text-gray-700">admin@harda.my</span></p>
+          <p>{t('login.passwordLabel')}: <span className="font-mono text-gray-700">Admin123!</span></p>
         </div>
       </div>
     </div>
