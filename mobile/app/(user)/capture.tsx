@@ -5,6 +5,7 @@
 
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { useState } from 'react';
 import {
   Alert, ScrollView, StyleSheet, Text, View,
@@ -26,11 +27,23 @@ export default function CaptureScreen() {
     const exif = extractFromExif(asset.exif as Record<string, unknown> | undefined);
     const gps = exif ?? (await getDeviceGps());
 
+    // Downscale + compress before upload. A raw phone photo is several MB, which
+    // dominates upload time and backend decode/inference. ~1280px @ 0.7 quality
+    // keeps enough detail for YOLO while shrinking the payload to a few hundred KB.
+    let uri = asset.uri;
+    try {
+      const rendered = await ImageManipulator.manipulate(asset.uri).resize({ width: 1280 }).renderAsync();
+      const out = await rendered.saveAsync({ compress: 0.7, format: SaveFormat.JPEG });
+      uri = out.uri;
+    } catch {
+      // Fall back to the original image if manipulation is unavailable.
+    }
+
     router.push({
       pathname: '/(user)/preview',
       params: {
-        uri: asset.uri,
-        mime: asset.mimeType ?? 'image/jpeg',
+        uri,
+        mime: 'image/jpeg',
         fileName: asset.fileName ?? `harda_${Date.now()}.jpg`,
         lat: gps?.lat?.toString() ?? '',
         lng: gps?.lng?.toString() ?? '',
