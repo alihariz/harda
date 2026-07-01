@@ -72,16 +72,24 @@ class YOLODetectionService:
     @classmethod
     def _resolve_model_path(cls):
         model_path = current_app.config.get("YOLO_MODEL_PATH", "ml/weights/yolov8n.pt")
-        if not os.path.isabs(model_path):
-            # Relative paths in .env are relative to the project root (harda/).
-            # __file__ → backend/app/services/yolo_detection.py, 4 levels up = harda/.
-            project_root = os.path.dirname(
-                os.path.dirname(
-                    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                )
-            )
-            model_path = os.path.join(project_root, model_path)
-        return model_path
+        if os.path.isabs(model_path):
+            return model_path
+        # Relative paths: try a few sensible roots and use the first that exists.
+        # Works locally (repo root = 4 levels up from this file, weights at
+        # harda/ml/weights) AND in the container (WORKDIR /app, weights
+        # bind-mounted at /app/ml/weights). __file__ = <root>/app/services/...
+        here = os.path.abspath(__file__)
+        candidates = [
+            os.getcwd(),                                              # container WORKDIR (/app) / repo root
+            os.path.dirname(os.path.dirname(os.path.dirname(here))),  # backend root (3 up)
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(here)))),  # repo root (4 up)
+        ]
+        for root in candidates:
+            candidate = os.path.join(root, model_path)
+            if os.path.exists(candidate):
+                return candidate
+        # Nothing matched — return the cwd-based path so the error is sensible.
+        return os.path.join(os.getcwd(), model_path)
 
     @classmethod
     def _get_model(cls):

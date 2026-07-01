@@ -54,9 +54,9 @@
       "typedRoutes": true
     },
     "extra": {
-      "apiBaseUrl": "http://10.0.2.2:5000/api/v1",
-      "apiBaseUrlIos": "http://192.168.68.109:5000/api/v1",
-      "apiBaseUrlDevice": "http://192.168.68.109:5000/api/v1"
+      "apiBaseUrl": "https://fyp.aliharizanuari.org/api/v1",
+      "apiBaseUrlIos": "https://fyp.aliharizanuari.org/api/v1",
+      "apiBaseUrlDevice": "https://fyp.aliharizanuari.org/api/v1"
     }
   }
 }

@@ -33,8 +33,6 @@ export default function Navbar() {
           {/* Desktop links */}
           <div className="hidden md:flex items-center gap-6">
             <NavLink to="/" end className={linkClass}>{t('nav.map')}</NavLink>
-            {!isAdmin && <NavLink to="/submit" className={linkClass}>{t('nav.submit')}</NavLink>}
-            {!isAdmin && user && <NavLink to="/reports" className={linkClass}>{t('nav.myReports')}</NavLink>}
             {isAdmin && (
               <>
                 <NavLink to="/admin" end className={linkClass}>{t('nav.dashboard')}</NavLink>
@@ -86,8 +84,6 @@ export default function Navbar() {
       {menuOpen && (
         <div className="md:hidden bg-gray-800 border-t border-gray-700 px-4 py-3 flex flex-col gap-3">
           <NavLink to="/" end className={linkClass} onClick={() => setMenuOpen(false)}>{t('nav.map')}</NavLink>
-          {!isAdmin && <NavLink to="/submit" className={linkClass} onClick={() => setMenuOpen(false)}>{t('nav.submit')}</NavLink>}
-          {!isAdmin && user && <NavLink to="/reports" className={linkClass} onClick={() => setMenuOpen(false)}>{t('nav.myReports')}</NavLink>}
           {isAdmin && (
             <>
               <NavLink to="/admin" end className={linkClass} onClick={() => setMenuOpen(false)}>{t('nav.dashboard')}</NavLink>
