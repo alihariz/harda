@@ -2,9 +2,11 @@
 // Tuned for outdoor / high-contrast visibility per the FYP UI brief.
 
 export const colors = {
-  // Brand
-  primary: '#0F172A',          // deep slate — used on header, splash
-  primaryAccent: '#1E40AF',    // action blue
+  // Brand — orange primary (actions) + blue accent, over a deep-slate base.
+  primary: '#0F172A',          // deep slate — headers, splash, dark surfaces
+  brand: '#F97316',            // orange — primary actions
+  brandDark: '#EA580C',        // orange (pressed)
+  primaryAccent: '#2563EB',    // blue — accent / verified / links
   success: '#15803D',          // green — resolved / verified
   warning: '#F59E0B',          // amber — in_progress
   danger: '#DC2626',           // red — high severity / pothole markers
