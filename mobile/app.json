@@ -18,7 +18,7 @@
         "NSCameraUsageDescription": "HARDA uses your camera to capture road hazard photos so they can be analysed and reported.",
         "NSPhotoLibraryUsageDescription": "HARDA needs access to your photo library so you can pick existing hazard photos.",
         "NSLocationWhenInUseUsageDescription": "HARDA uses your location to geotag hazards you submit and show nearby reports on the map."
-      },
+      }
     },
     "android": {
       "package": "my.edu.utm.harda",
@@ -30,7 +30,7 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.READ_EXTERNAL_STORAGE"
-      ],
+      ]
     },
     "web": {
       "bundler": "metro"
@@ -56,7 +56,10 @@
     "extra": {
       "apiBaseUrl": "https://fyp.aliharizanuari.org/api/v1",
       "apiBaseUrlIos": "https://fyp.aliharizanuari.org/api/v1",
-      "apiBaseUrlDevice": "https://fyp.aliharizanuari.org/api/v1"
+      "apiBaseUrlDevice": "https://fyp.aliharizanuari.org/api/v1",
+      "eas": {
+        "projectId": "f94aa9cf-cc79-42dd-92c9-d236a714c177"
+      }
     }
   }
 }
