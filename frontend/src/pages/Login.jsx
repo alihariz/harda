@@ -83,11 +83,6 @@ export default function Login() {
           </button>
         </form>
 
-        <div className="mt-6 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-xs text-gray-500 space-y-0.5">
-          <p className="font-medium text-gray-600 mb-1">{t('login.demoCreds')}</p>
-          <p>{t('login.emailLabel')}: <span className="font-mono text-gray-700">admin@harda.my</span></p>
-          <p>{t('login.passwordLabel')}: <span className="font-mono text-gray-700">Admin123!</span></p>
-        </div>
       </div>
     </div>
   )

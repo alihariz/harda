@@ -1,6 +1,7 @@
 from flask import Blueprint, request, current_app
 from app import limiter
 from app.utils.responses import success, error
+from app.utils.auth import admin_required
 from app.services.yolo_detection import YOLODetectionService
 from app.services.image_processing import ImageProcessingService
 
@@ -28,7 +29,8 @@ def analyse():
 
 
 @detection_bp.route("/model-info", methods=["GET"])
+@admin_required
 def model_info():
     """Diagnostic — returns the loaded YOLO weights path and class list.
-    Useful for the live demo to prove which model is actually serving requests."""
+    Restricted to admins; not for public consumption."""
     return success(YOLODetectionService.model_info())

@@ -13,11 +13,6 @@ import type { ApiResponse, AuthTokens, HazardReport, Team, User, Detection } fro
 const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, string>;
 
 const resolveBaseUrl = () => {
-  // Override mechanism for physical phones (set via Profile > API URL).
-  // Falls back to platform-specific localhost equivalents that work on
-  // emulator / simulator targets.
-  const override = auth.getApiOverride();
-  if (override) return override;
   if (Platform.OS === 'android') return extra.apiBaseUrl ?? 'http://10.0.2.2:5000/api/v1';
   return extra.apiBaseUrlIos ?? 'http://localhost:5000/api/v1';
 };
@@ -62,8 +57,6 @@ const handleError = (err: unknown): never => {
 // ── Endpoints ────────────────────────────────────────────────────────────────
 
 export const api = {
-  baseUrl: resolveBaseUrl,
-
   // Auth
   async login(email: string, password: string): Promise<{ user: User } & AuthTokens> {
     try {

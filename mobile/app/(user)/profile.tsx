@@ -1,30 +1,20 @@
-// Profile screen — language, logout, edit API base URL (handy for physical-phone demos).
-
 import { router } from 'expo-router';
-import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Field } from '@/components/Field';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { useAuth } from '@/context/AuthContext';
-import * as auth from '@/lib/auth';
 import { useI18n } from '@/lib/i18n';
 import { colors, radius, spacing, typography } from '@/lib/theme';
 
 export default function Profile() {
   const { user, role, teamId, logout } = useAuth();
   const { t } = useI18n();
-  const [apiUrl, setApiUrl] = useState('');
 
   const onLogout = async () => {
     await logout();
     router.replace('/(auth)/login');
-  };
-
-  const onSaveApi = async () => {
-    await auth.setApiOverride(apiUrl.trim() || null);
   };
 
   return (
@@ -51,15 +41,6 @@ export default function Profile() {
           {teamId ? (
             <Text style={styles.row}>{t('profile.teamId')} <Text style={styles.value}>{teamId}</Text></Text>
           ) : null}
-        </View>
-
-        <View style={styles.card}>
-          <Text style={typography.h3}>{t('profile.apiTitle')}</Text>
-          <Text style={typography.caption}>
-            {t('profile.apiHint')}
-          </Text>
-          <Field label={t('profile.baseUrl')} value={apiUrl} onChangeText={setApiUrl} autoCapitalize="none" />
-          <PrimaryButton title={t('profile.save')} onPress={onSaveApi} variant="secondary" />
         </View>
 
         <PrimaryButton title={t('profile.signOut')} onPress={onLogout} variant="danger" />

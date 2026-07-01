@@ -6,6 +6,7 @@ from app.utils.responses import success, error
 from app.utils.auth import admin_required
 from app.services.hazard_reporting import HazardReportingService
 from app.services.report_generation import ReportGenerationService
+from app.services.user_management import UserManagementService
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -239,3 +240,69 @@ def resolved_archive_csv():
             )
         },
     )
+
+
+# ── UC007 — Admin / crew / user account management ───────────────────────────
+
+
+@admin_bp.route("/admins", methods=["GET"])
+@admin_required
+def list_admins():
+    """UC007 — List all admin accounts."""
+    result, err = UserManagementService.list_admins()
+    if err:
+        return error(err)
+    return success(result)
+
+
+@admin_bp.route("/admins", methods=["POST"])
+@admin_required
+def create_admin():
+    """UC007 — Create a new admin account."""
+    data = request.get_json() or {}
+    result, err = UserManagementService.create_admin(data)
+    if err:
+        return error(err, status_code=400)
+    return success(result, "Admin account created", 201)
+
+
+@admin_bp.route("/admins/<int:admin_id>", methods=["DELETE"])
+@admin_required
+def delete_admin(admin_id):
+    """UC007 — Permanently delete an admin account."""
+    requesting = int(get_jwt_identity())
+    result, err = UserManagementService.delete_admin(admin_id, requesting)
+    if err:
+        return error(err, status_code=400)
+    return success(result, "Admin account deleted")
+
+
+@admin_bp.route("/crew", methods=["GET"])
+@admin_required
+def list_crew():
+    """UC007 — List all crew member accounts."""
+    result, err = UserManagementService.list_crew()
+    if err:
+        return error(err)
+    return success(result)
+
+
+@admin_bp.route("/crew", methods=["POST"])
+@admin_required
+def create_crew():
+    """UC007 — Create a new crew account assigned to a team."""
+    data = request.get_json() or {}
+    result, err = UserManagementService.create_crew(data)
+    if err:
+        return error(err, status_code=400)
+    return success(result, "Crew account created", 201)
+
+
+@admin_bp.route("/users/<int:user_id>", methods=["DELETE"])
+@admin_required
+def delete_user(user_id):
+    """UC007 — Permanently delete a user or crew account."""
+    result, err = UserManagementService.delete_user(user_id)
+    if err:
+        return error(err, status_code=400)
+    return success(result, "Account deleted")

@@ -3,12 +3,10 @@ import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Field } from '@/components/Field';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
-import * as auth from '@/lib/auth';
 import { useI18n } from '@/lib/i18n';
 import { colors, radius, spacing, typography } from '@/lib/theme';
 import type { User } from '@/lib/types';
@@ -17,7 +15,6 @@ export default function CrewProfile() {
   const { logout, role, teamId } = useAuth();
   const { t } = useI18n();
   const [me, setMe] = useState<User | null>(null);
-  const [apiUrl, setApiUrl] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -54,12 +51,6 @@ export default function CrewProfile() {
           {teamId ? (
             <Text style={styles.row}>{t('profile.teamId')} <Text style={styles.value}>{teamId}</Text></Text>
           ) : null}
-        </View>
-
-        <View style={styles.card}>
-          <Text style={typography.h3}>{t('profile.apiTitle')}</Text>
-          <Field label={t('profile.baseUrl')} value={apiUrl} onChangeText={setApiUrl} autoCapitalize="none" />
-          <PrimaryButton title={t('profile.save')} onPress={() => auth.setApiOverride(apiUrl || null)} variant="secondary" />
         </View>
 
         <PrimaryButton title={t('profile.signOut')} onPress={onLogout} variant="danger" />

@@ -10,7 +10,6 @@ import type { UserRole } from './types';
 const KEYS = {
   access: 'harda.access_token',
   refresh: 'harda.refresh_token',
-  apiOverride: 'harda.api_override',
 } as const;
 
 interface AccessClaims {
@@ -21,7 +20,6 @@ interface AccessClaims {
 }
 
 let memoryAccess: string | null = null;
-let memoryApiOverride: string | null = null;
 
 export const decode = (token: string | null): AccessClaims | null => {
   if (!token) return null;
@@ -34,7 +32,6 @@ export const decode = (token: string | null): AccessClaims | null => {
 
 export const hydrate = async () => {
   memoryAccess = await SecureStore.getItemAsync(KEYS.access);
-  memoryApiOverride = await SecureStore.getItemAsync(KEYS.apiOverride);
 };
 
 export const getAccessToken = async (): Promise<string | null> => {
@@ -56,13 +53,3 @@ export const clearTokens = async () => {
   await SecureStore.deleteItemAsync(KEYS.refresh);
 };
 
-export const getApiOverride = (): string | null => memoryApiOverride;
-
-export const setApiOverride = async (url: string | null) => {
-  memoryApiOverride = url;
-  if (url) {
-    await SecureStore.setItemAsync(KEYS.apiOverride, url);
-  } else {
-    await SecureStore.deleteItemAsync(KEYS.apiOverride);
-  }
-};

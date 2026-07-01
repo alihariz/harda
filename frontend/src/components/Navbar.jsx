@@ -36,6 +36,7 @@ export default function Navbar() {
           <NavLink to="/admin" end className={linkClass} onClick={() => setMenuOpen(false)}>{t('nav.dashboard')}</NavLink>
           <NavLink to="/admin/reports" className={linkClass} onClick={() => setMenuOpen(false)}>{t('nav.reportQueue')}</NavLink>
           <NavLink to="/admin/archive" className={linkClass} onClick={() => setMenuOpen(false)}>{t('nav.archive')}</NavLink>
+          <NavLink to="/admin/users" className={linkClass} onClick={() => setMenuOpen(false)}>{t('nav.users')}</NavLink>
         </>
       )}
     </>
