@@ -20,11 +20,11 @@ const STATUS_COLOUR = {
   rejected:    'bg-red-100 text-red-700',
 }
 
-const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:5000/api/v1').replace('/api/v1', '')
-
 function imgUrl(filePath) {
   if (!filePath) return null
-  return `${API_ORIGIN}/${filePath}`
+  // Nginx proxies /uploads/ → backend; use a root-relative URL so this works
+  // regardless of how VITE_API_BASE_URL is configured at build time.
+  return `/${filePath}`
 }
 
 function fmtDate(iso, locale = 'en-MY') {
