@@ -41,8 +41,20 @@ class HazardReport(db.Model):
     hazard_type = db.relationship("HazardType", back_populates="reports")
     status = db.relationship("HazardStatus", back_populates="reports")
     admin = db.relationship("Admin", back_populates="reports_validated", foreign_keys=[admin_id])
+    archived_by_admin = db.relationship("Admin", back_populates="reports_archived", foreign_keys=[archived_by])
     assigned_team = db.relationship("Team", back_populates="assigned_reports")
     images = db.relationship("HazardImage", back_populates="report", lazy="dynamic", cascade="all, delete-orphan")
+
+    @staticmethod
+    def _admin_brief(admin_obj):
+        if not admin_obj:
+            return None
+        full = ' '.join(p for p in [admin_obj.first_name or '', admin_obj.last_name or ''] if p)
+        return {
+            "admin_id": admin_obj.admin_id,
+            "username": admin_obj.username,
+            "full_name": full or admin_obj.username,
+        }
 
     def to_dict(self, include_images=False):
         out = {
@@ -52,6 +64,8 @@ class HazardReport(db.Model):
             "hazard_type": self.hazard_type.to_dict() if self.hazard_type else None,
             "status": self.status.to_dict() if self.status else None,
             "admin_id": self.admin_id,
+            "validated_by": self._admin_brief(self.admin),
+            "archived_by_admin": self._admin_brief(self.archived_by_admin),
             "assigned_team_id": self.assigned_team_id,
             "assigned_team": self.assigned_team.to_dict() if self.assigned_team else None,
             "assigned_at": self.assigned_at.isoformat() if self.assigned_at else None,

@@ -21,6 +21,12 @@ class Admin(db.Model):
         lazy="dynamic",
         foreign_keys="HazardReport.admin_id",
     )
+    reports_archived = db.relationship(
+        "HazardReport",
+        back_populates="archived_by_admin",
+        lazy="dynamic",
+        foreign_keys="HazardReport.archived_by",
+    )
     system_reports = db.relationship("SystemReport", back_populates="generated_by_admin", lazy="dynamic")
     led_teams = db.relationship("Team", back_populates="lead_admin", lazy="dynamic")
 

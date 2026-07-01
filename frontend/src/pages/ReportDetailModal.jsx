@@ -80,10 +80,11 @@ function Section({ title, children, action }) {
 
 function Timeline({ report, locale }) {
   const { t } = useI18n()
+  const admin = report.validated_by
   const steps = [
     { label: t('admin.reported'),  date: report.report_date },
-    { label: t('admin.validated'), date: report.validation_date },
-    { label: t('admin.assigned'),  date: report.assigned_at },
+    { label: t('admin.validated'), date: report.validation_date, admin },
+    { label: t('admin.assigned'),  date: report.assigned_at, admin },
     { label: t('status.resolved'), date: report.resolution_date },
   ]
   return (
@@ -104,6 +105,11 @@ function Timeline({ report, locale }) {
             </p>
             {step.date && (
               <p className="text-xs text-gray-400 mt-0.5 leading-tight">{fmtDate(step.date, locale)}</p>
+            )}
+            {step.date && step.admin && (
+              <p className="text-xs text-orange-500 mt-0.5 leading-tight truncate">
+                {t('admin.byAdmin', { username: step.admin.username })}
+              </p>
             )}
           </div>
         )
@@ -799,6 +805,11 @@ export default function ReportDetailModal({ reportId, onClose, onUpdated, initia
                         <p className="text-xs text-gray-400 mt-0.5">
                           {fmtDate(report.archived_at, locale)}
                         </p>
+                        {report.archived_by_admin && (
+                          <p className="text-xs text-orange-500 mt-0.5">
+                            {t('admin.archivedBy', { username: report.archived_by_admin.username })}
+                          </p>
+                        )}
                       </div>
                       <button
                         onClick={handleUnarchive}

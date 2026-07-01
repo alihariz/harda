@@ -53,7 +53,6 @@ export default function Login() {
               value={form.email}
               onChange={handleChange}
               required
-              placeholder="admin@harda.my"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
             />
           </div>
@@ -65,7 +64,6 @@ export default function Login() {
               value={form.password}
               onChange={handleChange}
               required
-              placeholder="••••••••"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
             />
           </div>
