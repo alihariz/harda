@@ -57,6 +57,9 @@ const handleError = (err: unknown): never => {
 // ── Endpoints ────────────────────────────────────────────────────────────────
 
 export const api = {
+  imageUrl: (filePath: string): string =>
+    resolveBaseUrl().replace('/api/v1', '') + '/' + filePath,
+
   // Auth
   async login(email: string, password: string): Promise<{ user: User } & AuthTokens> {
     try {

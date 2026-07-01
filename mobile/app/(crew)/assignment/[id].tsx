@@ -75,7 +75,7 @@ export default function AssignmentDetail() {
         <View style={styles.body}>
           {report.before_image ? (
             <Image
-              source={{ uri: api.baseUrl().replace('/api/v1', '') + '/' + report.before_image.file_path }}
+              source={{ uri: api.imageUrl(report.before_image.file_path) }}
               style={styles.photo}
               resizeMode="cover"
             />
@@ -136,7 +136,7 @@ export default function AssignmentDetail() {
             <View style={{ marginTop: spacing.lg }}>
               <Text style={typography.h3}>{t('crew.afterPhoto')}</Text>
               <Image
-                source={{ uri: api.baseUrl().replace('/api/v1', '') + '/' + report.after_image.file_path }}
+                source={{ uri: api.imageUrl(report.after_image.file_path) }}
                 style={styles.photo}
                 resizeMode="cover"
               />
