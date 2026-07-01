@@ -52,7 +52,7 @@ function ArchiveCard({ report, onClick, onUnarchive, unarchiving, t, fmtDate }) 
   const badgeCls = STATUS_BADGE[statusName] ?? STATUS_BADGE.resolved
 
   return (
-    <div className="w-full text-left bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:border-orange-300 transition-all group">
+    <div className="w-full text-left bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-card hover:shadow-lift hover:-translate-y-1 hover:border-orange-300 transition-all group">
       {/* Photos — side by side, clicking opens detail */}
       <button className="w-full" onClick={onClick}>
         <div className="grid grid-cols-2 divide-x divide-gray-100 bg-gray-50">
@@ -218,15 +218,15 @@ export default function AdminArchive() {
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">{t('admin.archiveHeading')}</h1>
-          <p className="text-gray-500 text-sm mt-0.5">
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{t('admin.archiveHeading')}</h1>
+          <p className="text-slate-500 text-sm mt-1 font-medium">
             {loading ? t('common.loading') : t('admin.archiveCount', { n: total })}
           </p>
         </div>
         <button
           onClick={handleExportCsv}
           disabled={exporting || total === 0}
-          className="flex items-center gap-2 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
+          className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition-all hover:-translate-y-0.5 shadow-[0_6px_14px_-4px_rgba(234,88,12,0.45)] cursor-pointer"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -241,7 +241,7 @@ export default function AdminArchive() {
         <select
           value={filters.status}
           onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
-          className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 text-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+          className="text-sm border border-slate-300 rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer transition"
         >
           <option value="">{t('admin.allStatuses')}</option>
           <option value="resolved">{t('admin.resolvedOnly')}</option>
@@ -251,7 +251,7 @@ export default function AdminArchive() {
         <select
           value={filters.state}
           onChange={(e) => setFilters((f) => ({ ...f, state: e.target.value }))}
-          className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 text-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+          className="text-sm border border-slate-300 rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer transition"
         >
           <option value="">{t('admin.allStates')}</option>
           {MY_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -260,7 +260,7 @@ export default function AdminArchive() {
         <select
           value={filters.team_id}
           onChange={(e) => setFilters((f) => ({ ...f, team_id: e.target.value }))}
-          className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 text-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+          className="text-sm border border-slate-300 rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer transition"
         >
           <option value="">{t('admin.allTeams')}</option>
           {teams.map((team) => (

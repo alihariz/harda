@@ -15,18 +15,26 @@ interface Props {
 export const PrimaryButton: React.FC<Props> = ({
   title, onPress, loading, disabled, variant = 'primary', style,
 }) => {
-  const bg = variant === 'primary'   ? colors.primaryAccent
-           : variant === 'danger'    ? colors.danger
-           : colors.surfaceAlt;
+  const bg = variant === 'primary' ? colors.brand
+    : variant === 'danger' ? colors.danger
+    : colors.surface;
   const fg = variant === 'secondary' ? colors.primary : '#fff';
   const isDisabled = !!(loading || disabled);
+
   return (
     <Pressable
       onPress={onPress}
       disabled={isDisabled}
+      accessibilityRole="button"
       style={({ pressed }) => [
         styles.btn,
-        { backgroundColor: bg, opacity: isDisabled ? 0.6 : pressed ? 0.85 : 1 },
+        variant === 'primary' && styles.primaryShadow,
+        variant === 'secondary' && styles.secondary,
+        {
+          backgroundColor: bg,
+          opacity: isDisabled ? 0.55 : 1,
+          transform: [{ scale: pressed && !isDisabled ? 0.98 : 1 }],
+        },
         style,
       ]}
     >
@@ -41,10 +49,21 @@ const styles = StyleSheet.create({
   btn: {
     paddingVertical: spacing.md + 2,
     paddingHorizontal: spacing.lg,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48,
+    minHeight: 50,
   },
-  text: { fontSize: 16, fontWeight: '600' },
+  secondary: {
+    borderWidth: 1.5,
+    borderColor: colors.border,
+  },
+  primaryShadow: {
+    shadowColor: colors.brandDark,
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 4,
+  },
+  text: { fontSize: 16, fontWeight: '700' },
 });

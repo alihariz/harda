@@ -13,9 +13,9 @@ import api from '../api/axios'
 import { useI18n } from '../i18n/I18nContext'
 
 const STATUS_COLOUR = {
-  submitted:   'bg-gray-100 text-gray-700',
+  submitted:   'bg-slate-100 text-slate-700',
   verified:    'bg-green-100 text-green-700',
-  in_progress: 'bg-yellow-100 text-yellow-700',
+  in_progress: 'bg-amber-100 text-amber-700',
   resolved:    'bg-blue-100 text-blue-700',
   rejected:    'bg-red-100 text-red-700',
 }
@@ -45,14 +45,14 @@ function Spinner({ size = 8 }) {
 
 function SeverityDots({ score }) {
   const { t } = useI18n()
-  if (!score) return <span className="text-gray-400">—</span>
-  const dotColour = score >= 4 ? 'bg-red-500' : score >= 3 ? 'bg-yellow-400' : 'bg-green-400'
+  if (!score) return <span className="text-slate-400">—</span>
+  const dotColour = score >= 4 ? 'bg-red-500' : score >= 3 ? 'bg-amber-400' : 'bg-green-400'
   return (
     <span className="flex items-center gap-1">
       {[1, 2, 3, 4, 5].map((i) => (
-        <span key={i} className={`inline-block w-2.5 h-2.5 rounded-full ${i <= score ? dotColour : 'bg-gray-200'}`} />
+        <span key={i} className={`inline-block w-2.5 h-2.5 rounded-full ${i <= score ? dotColour : 'bg-slate-200'}`} />
       ))}
-      <span className="text-xs text-gray-500 ml-1">{t(`severity.${score}`)}</span>
+      <span className="text-xs text-slate-500 ml-1">{t(`severity.${score}`)}</span>
     </span>
   )
 }
