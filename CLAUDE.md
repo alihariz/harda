@@ -146,10 +146,14 @@ harda/
 | title | varchar(100) | |
 | description | text | optional user description |
 | severity_score | integer | 1-5, from YOLO confidence |
+| detection_confidence | decimal(5,4) | **Progress 2:** raw YOLO confidence persisted for admin cross-check |
+| detection_low_confidence | boolean | **Progress 2:** true when no detection crossed the 0.70 threshold |
 | report_date | timestamp | |
 | validation_date | timestamp | |
 | resolution_date | timestamp | |
 | is_public | boolean | default true |
+| archived_at | timestamp | **Progress 2:** set by explicit admin archive action (audit lifecycle) |
+| archived_by | integer FK → admins | **Progress 2:** admin who archived the report |
 
 ### `hazard_images`
 | Column | Type | Notes |
@@ -231,8 +235,8 @@ All endpoints prefixed with `/api/v1/`.
 |---|---|---|
 | GET | `/users/:id` | Get user profile |
 | PUT | `/users/:id` | Update profile |
-| GET | `/admin/users` | Admin: list all users |
-| PUT | `/admin/users/:id/status` | Admin: activate/deactivate user |
+| GET | `/users/admin/users` | Admin: list all users (served by the users blueprint, not `/admin/`) |
+| PUT | `/users/admin/users/:id/status` | Admin: activate/deactivate user |
 
 ### Admin / Analytics (UC008–UC012)
 | Method | Endpoint | Description |
@@ -248,11 +252,21 @@ All endpoints prefixed with `/api/v1/`.
 | PUT | `/admin/reports/:id/assign` | **Progress 2:** Assign a team to a report (status → in_progress) |
 | GET | `/admin/archive` | **Progress 2:** Resolved-hazard archive with before+after photos |
 | GET | `/admin/archive/export.csv` | **Progress 2:** CSV export of the archive (UC012) |
+| GET | `/admin/hazard-types` | **Progress 2:** Hazard-type lookup for the admin edit dropdown (UC011) |
+| PUT | `/admin/reports/:id` | **Progress 2:** Admin edits report metadata: type, severity, title, location (UC011) |
+| POST | `/admin/reports/:id/archive` | **Progress 2:** Archive a resolved/rejected report (UC011) |
+| POST | `/admin/reports/:id/unarchive` | **Progress 2:** Restore an archived report to the queue (UC011) |
+| GET | `/admin/admins` | **Progress 2:** List admin accounts (UC007) |
+| POST | `/admin/admins` | **Progress 2:** Create an admin account (UC007) |
+| DELETE | `/admin/admins/:id` | **Progress 2:** Delete an admin account, self-delete blocked (UC007) |
+| GET | `/admin/crew` | **Progress 2:** List field-crew accounts (UC007) |
+| POST | `/admin/crew` | **Progress 2:** Create a crew account linked to a team (UC007) |
+| DELETE | `/admin/users/:id` | **Progress 2:** Hard-delete a user/crew account, FK refs nullified (UC007) |
 
 ### Detection / Diagnostic
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | `/detection/model-info` | **Progress 2:** Loaded YOLO weights path + class list (live-demo transparency) |
+| GET | `/detection/model-info` | **Progress 2:** Loaded YOLO weights path + class list. **Admin-only** (gated by `admin_required`) |
 
 ### Field Crew (Progress 2)
 Crew users log in via `/auth/login` like normal users; their JWT carries `role=crew` and `team_id`.
@@ -325,8 +339,8 @@ Crew users log in via `/auth/login` like normal users; their JWT carries `role=c
 
 ```
 Presentation Layer
-├── Mobile App (Android/Kotlin)          → field hazard reporting
-└── Web App (React.js)                   → map view + admin dashboard
+├── Mobile App (React Native + Expo, TS) → field hazard reporting (public user + field crew)
+└── Web App (React.js)                   → map view + admin dashboard (admin-only)
 
 Domain / Application Layer
 ├── Core Services
@@ -345,7 +359,7 @@ Domain / Application Layer
     └── ExportService                    → CSV/PDF export
 
 Data Access Layer
-├── PostgreSQL Database                  → all structured data (8 tables above)
+├── PostgreSQL Database                  → all structured data (9 tables above)
 └── File Storage                         → uploaded images (local dev / GCS prod)
 ```
 

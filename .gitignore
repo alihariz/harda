@@ -67,3 +67,5 @@ backend/test_uploads/
 
 # Mobile local env
 mobile/.env
+
+CLAUDE.md

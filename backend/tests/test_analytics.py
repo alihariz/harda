@@ -25,8 +25,12 @@ def test_archive_csv_export_returns_csv(client, admin_token):
     assert "report_id,title,hazard_type" in body  # header row
 
 
-def test_model_info_endpoint(client):
+def test_model_info_endpoint(client, admin_token):
+    # /detection/model-info is admin-gated: no token must be rejected.
     res = client.get("/api/v1/detection/model-info")
+    assert res.status_code in (401, 422)
+
+    res = client.get("/api/v1/detection/model-info", headers=auth_headers(admin_token))
     assert res.status_code == 200
     # The mocked YOLO doesn't have model_info patched, so this will either
     # return real model_info if ultralytics installed, or an error dict;
