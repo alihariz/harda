@@ -3,7 +3,7 @@
 // For EAS Build: set it as an EAS secret (eas secret:create ...)
 const { expo: base } = require('./app.json');
 
-export default {
+module.exports = {
   expo: {
     ...base,
     ios: {
