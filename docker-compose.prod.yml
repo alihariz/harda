@@ -1,0 +1,76 @@
+# HARDA — homelab production overlay for alielitedesk
+#
+# Used together with the repo's own docker-compose.yml:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Why this file exists rather than editing docker-compose.yml directly:
+# the base file stays valid for local development on the laptop, and `git pull`
+# never conflicts. Everything homelab-specific lives here.
+#
+# What it changes:
+#   1. frontend no longer publishes host port 80 — Caddy already owns 80 on this
+#      machine. It publishes 8090 instead, purely so you can reach HARDA over
+#      Tailscale while testing. Caddy reaches it over the `web` network.
+#   2. backend and db stop publishing ports to the host. Nothing outside Docker
+#      needs them: frontend/nginx.conf proxies /api/ and /uploads/ internally.
+#   3. frontend joins the external `web` network with the alias `harda-frontend`,
+#      which is the name Caddy proxies to.
+#   4. redis backs Flask-Limiter, so rate limits are shared across Gunicorn
+#      workers. Measured 2026-08-11: with the default memory:// storage and
+#      --workers 2, a configured limit of "10 per minute" allowed 20 requests,
+#      because each worker kept its own in-process counter.
+#
+# `!override` requires Docker Compose v2.24 or newer (`docker compose version`).
+
+services:
+  frontend:
+    # Replace the base file's ["80:80"] instead of appending to it.
+    ports: !override
+      - "8090:80"
+    networks:
+      default: {}
+      web:
+        aliases:
+          - harda-frontend
+
+  backend:
+    ports: !override []
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      # Shared counter store. Without this the limits are per-process.
+      RATELIMIT_STORAGE_URI: redis://redis:6379/0
+
+  db:
+    # Postgres should never be reachable from outside Docker.
+    ports: !override []
+
+  # Rate-limit counters only — no persistence wanted. If redis restarts the
+  # counters reset, which is harmless: the worst case is a caller briefly
+  # getting a fresh allowance.
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+      - --maxmemory
+      - 64mb
+      - --maxmemory-policy
+      - allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+networks:
+  # Created once by hand:  docker network create web
+  # Shared with the homelab stack so Caddy can resolve `harda-frontend`.
+  web:
+    external: true
